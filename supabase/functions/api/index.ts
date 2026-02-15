@@ -106,11 +106,25 @@ app.post('/api/auth/otp/send', async (c) => {
     return c.json({ success: true, message: 'Code sent' });
 });
 
+// DEBUG: Temporary endpoint to check what's in the DB
+app.get('/api/auth/otp/debug', async (c) => {
+    const email = c.req.query('email');
+    if (!email) return c.json({ error: 'email query param required' }, 400);
+
+    const { data, error } = await supabase
+        .from('verification_codes')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+    return c.json({ dbRecord: data, dbError: error ? error.message : null });
+});
+
 app.post('/api/auth/otp/verify', async (c) => {
     const { email, code } = await c.req.json();
     if (!email || !code) return c.json({ error: 'Email and code required' }, 400);
 
-    console.log('[OTP-VERIFY] Checking code for', email, 'submitted:', code);
+    console.log('[OTP-VERIFY] Checking code for', email, 'submitted:', code, 'type:', typeof code);
 
     // Step 1: Look up the stored code from DB
     const { data: record, error: lookupError } = await supabase
@@ -120,15 +134,15 @@ app.post('/api/auth/otp/verify', async (c) => {
         .single();
 
     if (lookupError || !record) {
-        console.error('[OTP-VERIFY] No code found for', email, lookupError);
-        return c.json({ error: 'No verification code found. Please request a new one.' }, 400);
+        console.error('[OTP-VERIFY] No code found for', email, 'Error:', JSON.stringify(lookupError));
+        return c.json({ error: 'No verification code found. Please request a new one.', debug: { lookupError: lookupError?.message } }, 400);
     }
 
-    console.log('[OTP-VERIFY] DB code:', record.code, 'User code:', code);
+    console.log('[OTP-VERIFY] DB code:', JSON.stringify(record.code), 'User code:', JSON.stringify(code), 'Match:', String(record.code).trim() === String(code).trim());
 
     // Step 2: Compare codes
     if (String(record.code).trim() !== String(code).trim()) {
-        return c.json({ error: 'Invalid code' }, 400);
+        return c.json({ error: 'Invalid code', debug: { dbCode: record.code, userCode: code, dbType: typeof record.code, userType: typeof code } }, 400);
     }
 
     // Step 3: Check expiry
@@ -167,7 +181,7 @@ app.post('/api/auth/otp/verify', async (c) => {
                 if (existingUser) {
                     const updateResult = await supabase.auth.admin.updateUserById(
                         existingUser.id,
-                        { password: DEMO_PASSWORD }
+                        { password: DEMO_PASSWORD, email_confirm: true }
                     );
                     if (updateResult.error) {
                         console.error('[OTP-VERIFY] Password reset failed:', updateResult.error);
