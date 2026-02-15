@@ -1,11 +1,11 @@
 
 import { serve } from 'std/http/server.ts';
 import { Hono } from 'hono';
-import { cors } from 'hono/middleware.ts';
+import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const app = new Hono();
+const app = new Hono().basePath('/api');
 
 // DEBUG LOGGER
 app.use('*', async (c, next) => {
@@ -52,7 +52,7 @@ async function getUser(c: any) {
 // ============================================================
 // 2. Auth (OTP Flow) - Random Code + DB Verification
 // ============================================================
-app.post('/api/auth/otp/send', async (c) => {
+app.post('/auth/otp/send', async (c) => {
     const { email } = await c.req.json();
     if (!email) return c.json({ error: 'Email required' }, 400);
 
@@ -107,7 +107,7 @@ app.post('/api/auth/otp/send', async (c) => {
 });
 
 
-app.post('/api/auth/otp/verify', async (c) => {
+app.post('/auth/otp/verify', async (c) => {
     const { email, code } = await c.req.json();
     if (!email || !code) return c.json({ error: 'Email and code required' }, 400);
 
@@ -217,7 +217,7 @@ app.post('/api/auth/otp/verify', async (c) => {
 });
 
 // Admin Password Login
-app.post('/api/auth/admin/login', async (c) => {
+app.post('/auth/admin/login', async (c) => {
     const { password } = await c.req.json();
     if (!password) return c.json({ error: 'Password required' }, 400);
 
@@ -289,18 +289,18 @@ app.post('/api/auth/admin/login', async (c) => {
 });
 
 // 3. User Info (/me)
-app.get('/api/me', async (c) => {
+app.get('/me', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
     return c.json({ user, entitlements: { credits: 0 } });
 });
 
 // 4. File Presign
-app.post('/api/files/presign', async (c) => {
+app.post('/files/presign', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    const fileId = `uploads/${user.id}/${crypto.randomUUID()}.pdf`;
+    const fileId = `uploads/${user.id}/${crypto.randomUUID()}.pdf`; // Using .pdf as default extension for simplicity, or we could pass extension from frontend
     const { data, error } = await supabase.storage
         .from('deal_files')
         .createSignedUploadUrl(fileId, 3600); // 1 hour expiry
@@ -314,7 +314,7 @@ app.post('/api/files/presign', async (c) => {
 });
 
 // 5. File Confirm
-app.post('/api/files/confirm', async (c) => {
+app.post('/files/confirm', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
     const { fileUrl } = await c.req.json();
@@ -322,28 +322,89 @@ app.post('/api/files/confirm', async (c) => {
 });
 
 // 6. Parse Deal
-app.post('/api/deals/parse', async (c) => {
+app.post('/deals/parse', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
     const { fileId, zip } = await c.req.json();
     const dealId = crypto.randomUUID();
 
-    // Mock extracted data to feed into Gemini later
-    const extracted = {
-        vehicle: "2021 Honda CR-V EX-L",
-        price: 26500,
-        fees: { doc_fee: 699, prep_fee: 1295, gps: 899 },
-        vin: "1HKRW2H87M...",
-        mileage: 34000
-    };
+    // 1. Get Signed URL for Gemini to read
+    const { data: signedData, error: signedError } = await supabase.storage
+        .from('deal_files')
+        .createSignedUrl(fileId, 600); // 10 mins
 
+    if (signedError || !signedData?.signedUrl) {
+        return c.json({ error: 'Could not access file' }, 500);
+    }
+
+    // 2. Call Gemini for parsing
+    const geminiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiKey) return c.json({ error: 'Server misconfigured (Missing AI Key)' }, 500);
+
+    // Fetch file content to base64 for Gemini
+    const fileRes = await fetch(signedData.signedUrl);
+    const fileBlob = await fileRes.blob();
+    const arrayBuffer = await fileBlob.arrayBuffer();
+    const base64File = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const mimeType = fileBlob.type || 'application/pdf';
+
+    const prompt = `
+    You are an expert OCR for car dealership documents. 
+    Analyze this Buyer's Order / Deal Sheet.
+    Extract the following fields accurately.
+    Return ONLY valid JSON.
+    Structure:
+    {
+        "vehicle": "Year Make Model Trim",
+        "price": number (Selling Price/MSRP),
+        "fees": { "doc_fee": number, "prep_fee": number, "gps": number, "other_add_ons": number },
+        "vin": "string",
+        "mileage": number,
+        "otd_price": number (Out the Door Price / Total Cash Price)
+    }
+    If a field is missing, use null or 0.
+    `;
+
+    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: prompt },
+                    {
+                        inline_data: {
+                            mime_type: mimeType,
+                            data: base64File
+                        }
+                    }
+                ]
+            }]
+        })
+    });
+
+    const aiJson = await aiRes.json();
+    let extracted;
+
+    try {
+        const text = aiJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const jsonStr = text.replace(/^```json\n|\n```$/g, "").trim();
+        extracted = JSON.parse(jsonStr);
+    } catch (e) {
+        console.error("Gemini Parse Error", e, JSON.stringify(aiJson));
+        // Fallback or error
+        return c.json({ error: "Could not parse document. Please ensure it is a clear image of a deal sheet." }, 400);
+    }
+
+    // 3. Construct preview
     const preview = {
-        vehicle_name: extracted.vehicle,
-        price: `$${extracted.price.toLocaleString()}`,
-        mileage: extracted.mileage.toLocaleString()
+        vehicle_name: extracted.vehicle || "Unknown Vehicle",
+        price: extracted.otd_price ? `$${extracted.otd_price.toLocaleString()}` : (extracted.price ? `$${extracted.price.toLocaleString()}` : "N/A"),
+        mileage: extracted.mileage ? extracted.mileage.toLocaleString() : "N/A"
     };
 
+    // 4. Save to DB
     const { error } = await supabase.from('deals').insert({
         id: dealId,
         user_id: user.id,
@@ -367,7 +428,7 @@ app.post('/api/deals/parse', async (c) => {
 });
 
 // 7. Stripe Checkout
-app.post('/api/billing/checkout', async (c) => {
+app.post('/billing/checkout', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
@@ -394,7 +455,7 @@ app.post('/api/billing/checkout', async (c) => {
 });
 
 // 8. Billing Status
-app.get('/api/billing/status', async (c) => {
+app.get('/billing/status', async (c) => {
     const dealId = c.req.query('dealId');
     if (!dealId) return c.json({ error: 'Missing dealId' }, 400);
     const { data: deal } = await supabase.from('deals').select('paid').eq('id', dealId).single();
@@ -402,7 +463,7 @@ app.get('/api/billing/status', async (c) => {
 });
 
 // 9. Analyze Deal (GEMINI Integrated)
-app.post('/api/deals/analyze', async (c) => {
+app.post('/deals/analyze', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
@@ -490,7 +551,7 @@ app.post('/api/deals/analyze', async (c) => {
 });
 
 // 10. Webhook
-app.post('/api/stripe/webhook', async (c) => {
+app.post('/stripe/webhook', async (c) => {
     const signature = c.req.header('Stripe-Signature');
     const body = await c.req.text();
     const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');

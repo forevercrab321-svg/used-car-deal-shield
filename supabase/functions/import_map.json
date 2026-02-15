@@ -1,8 +1,8 @@
 {
     "imports": {
         "std/": "https://deno.land/std@0.168.0/",
-        "hono": "https://deno.land/x/hono@v3.4.1/mod.ts",
-        "hono/": "https://deno.land/x/hono@v3.4.1/",
+        "hono": "https://esm.sh/hono@3.12.0",
+        "hono/": "https://esm.sh/hono@3.12.0/",
         "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
         "stripe": "https://esm.sh/stripe@12.0.0?target=deno"
     }
