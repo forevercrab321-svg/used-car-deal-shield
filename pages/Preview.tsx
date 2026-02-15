@@ -47,10 +47,10 @@ export const Preview: React.FC = () => {
           <span className="text-xs bg-slate-200 px-2 py-1 rounded text-slate-600">ID: {dealId?.slice(-4)}</span>
         </div>
         <div className="p-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-1">{deal.extracted_fields.vehicle_name}</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">{deal.extracted_fields?.vehicle_name || deal.extracted_fields?.vehicle || 'Unknown Vehicle'}</h2>
           <div className="flex justify-between items-baseline mt-4">
             <span className="text-slate-500">Dealer OTD Price</span>
-            <span className="text-2xl font-bold text-slate-900">${deal.extracted_fields.otd_price.toLocaleString()}</span>
+            <span className="text-2xl font-bold text-slate-900">${(deal.extracted_fields?.otd_price || deal.extracted_fields?.price || 0).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -61,7 +61,7 @@ export const Preview: React.FC = () => {
           <Lock size={40} className="text-slate-800 mb-4 drop-shadow-md" />
           <h3 className="text-xl font-bold text-slate-900 mb-2 drop-shadow-sm">Full Analysis Locked</h3>
           <p className="text-slate-900 font-medium mb-6 drop-shadow-sm">Unlock to see the Red Flags and Negotiation Script.</p>
-          <Button 
+          <Button
             onClick={() => navigate(`/paywall/${dealId}`)}
             className="px-8 py-4 text-base shadow-xl"
             fullWidth
