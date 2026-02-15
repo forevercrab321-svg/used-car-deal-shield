@@ -5,10 +5,19 @@ import { cors } from 'hono/middleware.ts';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const app = new Hono().basePath('/api');
+const app = new Hono();
+
+// DEBUG LOGGER
+app.use('*', async (c, next) => {
+    console.log(`[REQUEST] ${c.req.method} ${c.req.url} -> Path: ${c.req.path}`);
+    await next();
+});
+
 
 // 1. Middleware & Setup
 const FRONTEND_ORIGIN = Deno.env.get('FRONTEND_ORIGIN') || '*';
+
+// Global CORS - verify it applies to all paths including /api
 app.use('*', cors({
     origin: FRONTEND_ORIGIN,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -17,6 +26,10 @@ app.use('*', cors({
     maxAge: 600,
     credentials: true,
 }));
+
+// OPTIONS handler for CORS preflight on all routes
+app.options('*', (c) => c.text('', 204));
+
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -37,13 +50,51 @@ async function getUser(c: any) {
 }
 
 // 2. Auth (Login)
-app.post('/auth/login', async (c) => {
+// 2. Auth (OTP Flow)
+app.post('/api/auth/otp/send', async (c) => {
     const { email } = await c.req.json();
     if (!email) return c.json({ error: 'Email required' }, 400);
 
-    // Strategy: Try sign up. If exists, try sign in with generic password. 
-    // This is a "Backdoor" for the DEMO. In prod usage, use Magic Link properly.
-    const DEMO_PASSWORD = "demo-password-123";
+    // Call Resend
+    const resendKey = Deno.env.get('RESEND_API_KEY');
+
+    // Default to success logic even if no key (for demo capability if key missing)
+    if (resendKey) {
+        try {
+            const res = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${resendKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    from: 'onboarding@resend.dev', // Default Resend testing sender
+                    to: email,
+                    subject: 'Your Deal Shield Verification Code',
+                    html: '<p>Your code is: <strong>123456</strong></p>'
+                })
+            });
+            if (!res.ok) {
+                console.error("Resend Error:", await res.text());
+                // Don't fail the request, just log. allow demo default code.
+            }
+        } catch (e) {
+            console.error("Resend Exception:", e);
+        }
+    }
+
+    // Always simulate success for the demo flow with hardcoded code
+    return c.json({ success: true, message: "Code sent" });
+});
+
+app.post('/api/auth/otp/verify', async (c) => {
+    const { email, code } = await c.req.json();
+    if (code !== '123456') {
+        return c.json({ error: "Invalid code" }, 400);
+    }
+
+    // Create Session
+    const DEMO_PASSWORD = Deno.env.get('BACKEND_USER_PASSWORD') || "demo-password-123";
 
     let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -51,38 +102,49 @@ app.post('/auth/login', async (c) => {
     });
 
     if (signInError) {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        // Use Admin API to create user with email auto-confirmed
+        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
             email,
             password: DEMO_PASSWORD,
+            email_confirm: true
         });
-        if (signUpError) {
-            // If user exists but password login failed, maybe they signed up differently?
-            // Just return error or try without password (magic link triggered)
-            // For this strict requirement "Return Token", we assume success or fail.
-            return c.json({ error: signUpError.message }, 400);
+
+        if (createError) {
+            return c.json({ error: createError.message }, 400);
         }
-        signInData = { user: signUpData.user, session: signUpData.session };
+
+        // Now sign in to get the session
+        const { data: newSignInData, error: newSignInError } = await supabase.auth.signInWithPassword({
+            email,
+            password: DEMO_PASSWORD
+        });
+
+        if (newSignInError) {
+            return c.json({ error: newSignInError.message }, 500);
+        }
+        signInData = newSignInData;
     }
 
     if (!signInData.session) {
-        return c.json({ error: "Could not create session. Please check Supabase Auth settings." }, 500);
+        return c.json({ error: "Could not create session." }, 500);
     }
 
     return c.json({
         token: signInData.session.access_token,
+        refreshToken: signInData.session.refresh_token,
         user: { id: signInData.user?.id, email: signInData.user?.email }
     });
 });
 
 // 3. User Info (/me)
-app.get('/me', async (c) => {
+app.get('/api/me', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
     return c.json({ user, entitlements: { credits: 0 } });
 });
 
 // 4. File Presign
-app.post('/files/presign', async (c) => {
+app.post('/api/files/presign', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
@@ -100,7 +162,7 @@ app.post('/files/presign', async (c) => {
 });
 
 // 5. File Confirm
-app.post('/files/confirm', async (c) => {
+app.post('/api/files/confirm', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
     const { fileUrl } = await c.req.json();
@@ -108,7 +170,7 @@ app.post('/files/confirm', async (c) => {
 });
 
 // 6. Parse Deal
-app.post('/deals/parse', async (c) => {
+app.post('/api/deals/parse', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
@@ -153,7 +215,7 @@ app.post('/deals/parse', async (c) => {
 });
 
 // 7. Stripe Checkout
-app.post('/billing/checkout', async (c) => {
+app.post('/api/billing/checkout', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
@@ -180,7 +242,7 @@ app.post('/billing/checkout', async (c) => {
 });
 
 // 8. Billing Status
-app.get('/billing/status', async (c) => {
+app.get('/api/billing/status', async (c) => {
     const dealId = c.req.query('dealId');
     if (!dealId) return c.json({ error: 'Missing dealId' }, 400);
     const { data: deal } = await supabase.from('deals').select('paid').eq('id', dealId).single();
@@ -188,7 +250,7 @@ app.get('/billing/status', async (c) => {
 });
 
 // 9. Analyze Deal (GEMINI Integrated)
-app.post('/deals/analyze', async (c) => {
+app.post('/api/deals/analyze', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
@@ -278,7 +340,7 @@ app.post('/deals/analyze', async (c) => {
 });
 
 // 10. Webhook
-app.post('/stripe/webhook', async (c) => {
+app.post('/api/stripe/webhook', async (c) => {
     const signature = c.req.header('Stripe-Signature');
     const body = await c.req.text();
     const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');

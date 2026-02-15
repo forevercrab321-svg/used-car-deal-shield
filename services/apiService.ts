@@ -23,12 +23,12 @@ export const apiService = {
     // 1. Auth (Custom OTP Flow)
     sendOtp: async (email: string) => {
         // Call backend to send code via Resend
-        await apiService._fetchApi('/auth/otp/send', 'POST', { email });
+        await apiService._fetchApi('/auth/otp/send', 'POST', { email }, false);
     },
 
     verifyOtp: async (email: string, code: string) => {
         // Call backend to verify code and get session
-        const data = await apiService._fetchApi('/auth/otp/verify', 'POST', { email, code });
+        const data = await apiService._fetchApi('/auth/otp/verify', 'POST', { email, code }, false);
 
         // Update Supabase session manually since we got token from backend
         const { error } = await supabase.auth.setSession({
@@ -57,23 +57,29 @@ export const apiService = {
     logout: async () => { await supabase.auth.signOut(); },
 
     // Helper to call Unified Backend API
-    _fetchApi: async (path: string, method: string, body?: any) => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error("Unauthorized");
+    _fetchApi: async (path: string, method: string, body?: any, requireAuth = true) => {
+        let session = null;
+        if (requireAuth) {
+            const { data } = await supabase.auth.getSession();
+            session = data.session;
+            if (!session) throw new Error("Unauthorized");
+        }
 
         // Construct URL: {SUPABASE_URL}/functions/v1/api{path}
         const projectUrl = import.meta.env.VITE_SUPABASE_URL;
-        // Note: Edge Function URL standard is different if using custom domain, 
-        // but typically: https://<project_ref>.supabase.co/functions/v1/api
-        // We will construct it assuming VITE_SUPABASE_URL ends in .co
         const functionUrl = `${projectUrl}/functions/v1/api${path}`;
+
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+
+        if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
 
         const res = await fetch(functionUrl, {
             method,
-            headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-            },
+            headers,
             body: body ? JSON.stringify(body) : undefined
         });
 
@@ -139,7 +145,7 @@ export const apiService = {
     analyzeDeal: async (dealId: string): Promise<{ report?: Report; requires_payment?: boolean }> => {
         const res = await apiService._fetchApi('/deals/analyze', 'POST', { dealId });
 
-        if (res.requiresPayment) return { requiresPayment: true };
+        if (res.requiresPayment) return { requires_payment: true };
 
         // Map report
         const r = res.report;
