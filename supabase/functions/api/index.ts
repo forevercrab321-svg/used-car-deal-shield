@@ -5,7 +5,7 @@ import { cors } from 'hono/middleware.ts';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const app = new Hono();
+const app = new Hono().basePath('/api');
 
 // 1. Middleware & Setup
 const FRONTEND_ORIGIN = Deno.env.get('FRONTEND_ORIGIN') || '*';
