@@ -49,90 +49,169 @@ async function getUser(c: any) {
     return user;
 }
 
-// 2. Auth (Login)
-// 2. Auth (OTP Flow)
+// ============================================================
+// 2. Auth (OTP Flow) - Random Code + DB Verification
+// ============================================================
 app.post('/api/auth/otp/send', async (c) => {
     const { email } = await c.req.json();
     if (!email) return c.json({ error: 'Email required' }, 400);
 
-    // Call Resend
-    const resendKey = Deno.env.get('RESEND_API_KEY');
+    // Step 1: Generate a RANDOM 6-digit code
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    console.log(`[OTP] Generated code ${code} for ${email}`);
 
-    // Default to success logic even if no key (for demo capability if key missing)
+    // Step 2: Store code in DB (upsert by email)
+    const { error: dbError } = await supabase.from('verification_codes').upsert({
+        email: email,
+        code: code,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    }, { onConflict: 'email' });
+
+    if (dbError) {
+        console.error('[OTP] DB upsert error:', JSON.stringify(dbError));
+        return c.json({ error: 'Failed to generate verification code' }, 500);
+    }
+
+    // Step 3: Send email via Resend with the REAL code
+    const resendKey = Deno.env.get('RESEND_API_KEY');
     if (resendKey) {
         try {
-            const res = await fetch('https://api.resend.com/emails', {
+            const emailRes = await fetch('https://api.resend.com/emails', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${resendKey}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    from: 'onboarding@resend.dev', // Default Resend testing sender
+                    from: 'onboarding@resend.dev',
                     to: email,
                     subject: 'Your Deal Shield Verification Code',
-                    html: '<p>Your code is: <strong>123456</strong></p>'
+                    html: '<p>Your verification code is: <strong>' + code + '</strong></p><p>This code is valid for 15 minutes.</p>'
                 })
             });
-            if (!res.ok) {
-                console.error("Resend Error:", await res.text());
-                // Don't fail the request, just log. allow demo default code.
+            if (!emailRes.ok) {
+                const errText = await emailRes.text();
+                console.error('[OTP] Resend API error:', errText);
+            } else {
+                console.log('[OTP] Email sent successfully to', email);
             }
         } catch (e) {
-            console.error("Resend Exception:", e);
+            console.error('[OTP] Resend exception:', e);
         }
+    } else {
+        console.log('[OTP] No RESEND_API_KEY set. Code for ' + email + ' is ' + code);
     }
 
-    // Always simulate success for the demo flow with hardcoded code
-    return c.json({ success: true, message: "Code sent" });
+    return c.json({ success: true, message: 'Code sent' });
 });
 
 app.post('/api/auth/otp/verify', async (c) => {
     const { email, code } = await c.req.json();
-    if (code !== '123456') {
-        return c.json({ error: "Invalid code" }, 400);
+    if (!email || !code) return c.json({ error: 'Email and code required' }, 400);
+
+    console.log('[OTP-VERIFY] Checking code for', email, 'submitted:', code);
+
+    // Step 1: Look up the stored code from DB
+    const { data: record, error: lookupError } = await supabase
+        .from('verification_codes')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+    if (lookupError || !record) {
+        console.error('[OTP-VERIFY] No code found for', email, lookupError);
+        return c.json({ error: 'No verification code found. Please request a new one.' }, 400);
     }
 
-    // Create Session
-    const DEMO_PASSWORD = Deno.env.get('BACKEND_USER_PASSWORD') || "demo-password-123";
+    console.log('[OTP-VERIFY] DB code:', record.code, 'User code:', code);
 
-    let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+    // Step 2: Compare codes
+    if (String(record.code).trim() !== String(code).trim()) {
+        return c.json({ error: 'Invalid code' }, 400);
+    }
+
+    // Step 3: Check expiry
+    if (new Date(record.expires_at) < new Date()) {
+        return c.json({ error: 'Code expired. Please request a new one.' }, 400);
+    }
+
+    // Step 4: Create or fix user account and sign in
+    const DEMO_PASSWORD = Deno.env.get('BACKEND_USER_PASSWORD') || 'deal-shield-demo-pw-2024';
+
+    // Try to sign in first
+    let signInResult = await supabase.auth.signInWithPassword({
+        email: email,
         password: DEMO_PASSWORD
     });
 
-    if (signInError) {
-        // Use Admin API to create user with email auto-confirmed
-        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
-            email,
+    if (signInResult.error) {
+        console.log('[OTP-VERIFY] Sign-in failed:', signInResult.error.message);
+
+        // Try to create user first
+        const createResult = await supabase.auth.admin.createUser({
+            email: email,
             password: DEMO_PASSWORD,
             email_confirm: true
         });
 
-        if (createError) {
-            return c.json({ error: createError.message }, 400);
+        if (createResult.error) {
+            console.log('[OTP-VERIFY] Create failed:', createResult.error.message);
+
+            // User already exists but wrong password -> force reset password
+            if (createResult.error.message.includes('already')) {
+                console.log('[OTP-VERIFY] User exists, resetting password...');
+                const { data: { users } } = await supabase.auth.admin.listUsers();
+                const existingUser = users?.find((u: any) => u.email === email);
+
+                if (existingUser) {
+                    const updateResult = await supabase.auth.admin.updateUserById(
+                        existingUser.id,
+                        { password: DEMO_PASSWORD }
+                    );
+                    if (updateResult.error) {
+                        console.error('[OTP-VERIFY] Password reset failed:', updateResult.error);
+                        return c.json({ error: 'Account fix failed' }, 500);
+                    }
+                    console.log('[OTP-VERIFY] Password reset successful for', existingUser.id);
+                } else {
+                    return c.json({ error: 'User state error' }, 500);
+                }
+            } else {
+                return c.json({ error: createResult.error.message }, 400);
+            }
+        } else {
+            console.log('[OTP-VERIFY] User created successfully:', createResult.data.user?.id);
         }
 
-        // Now sign in to get the session
-        const { data: newSignInData, error: newSignInError } = await supabase.auth.signInWithPassword({
-            email,
+        // Retry sign in after create/fix
+        signInResult = await supabase.auth.signInWithPassword({
+            email: email,
             password: DEMO_PASSWORD
         });
 
-        if (newSignInError) {
-            return c.json({ error: newSignInError.message }, 500);
+        if (signInResult.error) {
+            console.error('[OTP-VERIFY] Retry sign-in failed:', signInResult.error);
+            return c.json({ error: 'Login failed: ' + signInResult.error.message }, 500);
         }
-        signInData = newSignInData;
     }
 
-    if (!signInData.session) {
-        return c.json({ error: "Could not create session." }, 500);
+    if (!signInResult.data.session) {
+        return c.json({ error: 'No session created' }, 500);
     }
+
+    console.log('[OTP-VERIFY] Login successful for', email);
+
+    // Step 5: Delete used code
+    await supabase.from('verification_codes').delete().eq('email', email);
 
     return c.json({
-        token: signInData.session.access_token,
-        refreshToken: signInData.session.refresh_token,
-        user: { id: signInData.user?.id, email: signInData.user?.email }
+        token: signInResult.data.session.access_token,
+        refreshToken: signInResult.data.session.refresh_token,
+        user: {
+            id: signInResult.data.user?.id,
+            email: signInResult.data.user?.email
+        }
     });
 });
 
@@ -263,7 +342,6 @@ app.post('/api/deals/analyze', async (c) => {
     // 2. Check Cache
     const { data: existingReport } = await supabase.from('reports').select('*').eq('deal_id', dealId).single();
     if (existingReport) {
-        // Reconstitute the expected JSON structure
         return c.json({
             report: {
                 score: existingReport.score,
@@ -310,12 +388,10 @@ app.post('/api/deals/analyze', async (c) => {
 
     try {
         const text = aiJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        // Clean markdown if present
         const jsonStr = text.replace(/^```json\n|\n```$/g, "").trim();
         reportData = JSON.parse(jsonStr);
     } catch (e) {
         console.error("Gemini Parse Error", e, JSON.stringify(aiJson));
-        // Fallback if AI fails (e.g. key issue or hallucination)
         reportData = {
             score: 50,
             red_flags: [{ title: "AI Analysis Failed", severity: "medium", explanation: "Could not generate report.", estimated_savings: 0, negotiation_line: "" }],

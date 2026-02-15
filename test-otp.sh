@@ -2,9 +2,7 @@
 
 # Configuration
 API_URL="https://ywvhpxqfapjjfxhccqxu.supabase.co/functions/v1/api"
-# Use random email to avoid rate limits during testing
-RANDOM_ID=$(date +%s)
-EMAIL="test-${RANDOM_ID}@example.com"
+EMAIL="forevercrab321@gmail.com"
 CODE="123456"
 
 echo "Running OTP Test against: $API_URL"

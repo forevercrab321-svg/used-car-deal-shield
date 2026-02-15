@@ -70,6 +70,19 @@ create table public.reports (
 alter table public.reports enable row level security;
 create policy "Users can view reports for their deals" on public.reports for select using ( exists ( select 1 from public.deals where deals.id = reports.deal_id and deals.user_id = auth.uid() ) );
 
+-- Verification Codes for Custom Auth
+create table if not exists public.verification_codes (
+  id uuid default gen_random_uuid() primary key,
+  email text not null unique,
+  code text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  expires_at timestamp with time zone default timezone('utc'::text, now() + interval '15 minutes') not null
+);
+
+-- RLS for verification codes (Only service role should access usually, but for safety)
+alter table public.verification_codes enable row level security;
+-- No public access policies, strictly backend accessed
+
 -- STORAGE (Uncomment if running in Editor)
 -- insert into storage.buckets (id, name, public) values ('deal_files', 'deal_files', true);
 -- create policy "Authenticated users can upload" on storage.objects for insert to authenticated with check ( bucket_id = 'deal_files' and auth.uid() = owner );
