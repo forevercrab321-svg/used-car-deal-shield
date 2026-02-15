@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, User as UserIcon, Shield } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import { User } from '../types';
 import { Button } from '../components/Button';
@@ -21,6 +21,8 @@ export const Account: React.FC = () => {
 
   const [otp, setOtp] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [showProLogin, setShowProLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +53,21 @@ export const Account: React.FC = () => {
     setIsLoading(false);
   };
 
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminPassword) return;
+    setIsLoading(true);
+    try {
+      const u = await apiService.adminLogin(adminPassword);
+      setUser(u);
+      navigate('/upload');
+    } catch (err) {
+      console.error(err);
+      alert("Invalid admin password.");
+    }
+    setIsLoading(false);
+  };
+
   const handleLogout = () => {
     apiService.logout();
     setUser(null);
@@ -70,57 +87,101 @@ export const Account: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            {!message ? (
-              // Step 1: Email Input
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="you@example.com"
-                  />
-                </div>
-                <Button fullWidth isLoading={isLoading} type="submit">
-                  Send Verification Code
-                </Button>
-              </>
-            ) : (
-              // Step 2: Code Input
-              <>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Verification Code</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 text-center tracking-widest text-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="123456"
-                  />
-                </div>
-                <Button fullWidth isLoading={isLoading} onClick={handleVerify}>
-                  Verify & Login
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => setMessage(null)}
-                  className="w-full text-center text-sm text-slate-400 hover:text-slate-600 mt-2"
-                >
-                  Back to Email
-                </button>
-              </>
-            )}
+          {!showProLogin ? (
+            <>
+              <form onSubmit={handleLogin} className="space-y-4">
+                {!message ? (
+                  // Step 1: Email Input
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    <Button fullWidth isLoading={isLoading} type="submit">
+                      Send Verification Code
+                    </Button>
+                  </>
+                ) : (
+                  // Step 2: Code Input
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Verification Code</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 text-center tracking-widest text-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="123456"
+                      />
+                    </div>
+                    <Button fullWidth isLoading={isLoading} onClick={handleVerify}>
+                      Verify & Login
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setMessage(null)}
+                      className="w-full text-center text-sm text-slate-400 hover:text-slate-600 mt-2"
+                    >
+                      Back to Email
+                    </button>
+                  </>
+                )}
 
-            <p className="text-xs text-center text-slate-400 mt-4">
-              We'll email you a secure code to sign in instantly.
-            </p>
-          </form>
+                <p className="text-xs text-center text-slate-400 mt-4">
+                  We'll email you a secure code to sign in instantly.
+                </p>
+              </form>
+
+              {/* Pro Login button */}
+              <div className="mt-6 pt-6 border-t border-slate-200">
+                <button
+                  onClick={() => setShowProLogin(true)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold hover:from-amber-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg"
+                >
+                  <Shield size={18} />
+                  Pro Login
+                </button>
+              </div>
+            </>
+          ) : (
+            /* Pro Login Form */
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Shield size={20} className="text-amber-500" />
+                <h2 className="text-lg font-semibold text-slate-800">Pro Developer Login</h2>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Admin Password</label>
+                <input
+                  type="password"
+                  required
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-100 focus:border-amber-500 outline-none transition-all"
+                  placeholder="Enter admin password"
+                />
+              </div>
+              <Button fullWidth isLoading={isLoading} type="submit">
+                Login as Pro
+              </Button>
+              <button
+                type="button"
+                onClick={() => setShowProLogin(false)}
+                className="w-full text-center text-sm text-slate-400 hover:text-slate-600 mt-2"
+              >
+                Back to Email Login
+              </button>
+            </form>
+          )}
 
         </div>
       </div>

@@ -40,6 +40,18 @@ export const apiService = {
         return data.user;
     },
 
+    adminLogin: async (password: string) => {
+        const data = await apiService._fetchApi('/auth/admin/login', 'POST', { password }, false);
+
+        const { error } = await supabase.auth.setSession({
+            access_token: data.token,
+            refresh_token: data.refreshToken
+        });
+        if (error) throw error;
+
+        return data.user;
+    },
+
     getCurrentUser: async (): Promise<User | null> => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return null;

@@ -106,19 +106,6 @@ app.post('/api/auth/otp/send', async (c) => {
     return c.json({ success: true, message: 'Code sent' });
 });
 
-// DEBUG: Temporary endpoint to check what's in the DB
-app.get('/api/auth/otp/debug', async (c) => {
-    const email = c.req.query('email');
-    if (!email) return c.json({ error: 'email query param required' }, 400);
-
-    const { data, error } = await supabase
-        .from('verification_codes')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-    return c.json({ dbRecord: data, dbError: error ? error.message : null });
-});
 
 app.post('/api/auth/otp/verify', async (c) => {
     const { email, code } = await c.req.json();
@@ -225,6 +212,78 @@ app.post('/api/auth/otp/verify', async (c) => {
         user: {
             id: signInResult.data.user?.id,
             email: signInResult.data.user?.email
+        }
+    });
+});
+
+// Admin Password Login
+app.post('/api/auth/admin/login', async (c) => {
+    const { password } = await c.req.json();
+    if (!password) return c.json({ error: 'Password required' }, 400);
+
+    // Check admin password
+    if (password !== 'admin2026') {
+        return c.json({ error: 'Invalid admin password' }, 401);
+    }
+
+    const ADMIN_EMAIL = 'admin@dealshield.pro';
+    const ADMIN_PASSWORD = 'admin-dealshield-2026-secret';
+
+    // Create or sign in admin user
+    let signInResult = await supabase.auth.signInWithPassword({
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD
+    });
+
+    if (signInResult.error) {
+        // Create admin user
+        const createResult = await supabase.auth.admin.createUser({
+            email: ADMIN_EMAIL,
+            password: ADMIN_PASSWORD,
+            email_confirm: true,
+            user_metadata: { role: 'admin', full_name: 'Admin Pro' }
+        });
+
+        if (createResult.error && createResult.error.message.includes('already')) {
+            // User exists, reset password and set admin role
+            const { data: { users } } = await supabase.auth.admin.listUsers();
+            const adminUser = users?.find((u: any) => u.email === ADMIN_EMAIL);
+            if (adminUser) {
+                await supabase.auth.admin.updateUserById(adminUser.id, {
+                    password: ADMIN_PASSWORD,
+                    email_confirm: true,
+                    user_metadata: { role: 'admin', full_name: 'Admin Pro' }
+                });
+            }
+        }
+
+        // Retry sign in
+        signInResult = await supabase.auth.signInWithPassword({
+            email: ADMIN_EMAIL,
+            password: ADMIN_PASSWORD
+        });
+
+        if (signInResult.error) {
+            return c.json({ error: 'Admin login failed: ' + signInResult.error.message }, 500);
+        }
+    }
+
+    if (!signInResult.data.session) {
+        return c.json({ error: 'No session created' }, 500);
+    }
+
+    // Ensure admin role is set in metadata
+    await supabase.auth.admin.updateUserById(signInResult.data.user!.id, {
+        user_metadata: { role: 'admin', full_name: 'Admin Pro' }
+    });
+
+    return c.json({
+        token: signInResult.data.session.access_token,
+        refreshToken: signInResult.data.session.refresh_token,
+        user: {
+            id: signInResult.data.user?.id,
+            email: signInResult.data.user?.email,
+            role: 'admin'
         }
     });
 });
@@ -349,9 +408,10 @@ app.post('/api/deals/analyze', async (c) => {
 
     const { dealId } = await c.req.json();
 
-    // 1. Verify Payment
+    // 1. Verify Payment (skip for admin users)
     const { data: deal } = await supabase.from('deals').select('*').eq('id', dealId).single();
-    if (!deal?.paid) return c.json({ requiresPayment: true });
+    const isAdmin = user.user_metadata?.role === 'admin';
+    if (!isAdmin && !deal?.paid) return c.json({ requiresPayment: true });
 
     // 2. Check Cache
     const { data: existingReport } = await supabase.from('reports').select('*').eq('deal_id', dealId).single();
