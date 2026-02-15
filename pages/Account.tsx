@@ -19,19 +19,34 @@ export const Account: React.FC = () => {
     checkUser();
   }, []);
 
+  const [otp, setOtp] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     setIsLoading(true);
-    setMessage(null);
     try {
-      await apiService.login(email);
-      setMessage("Magic link sent! Check your email to log in.");
+      await apiService.sendOtp(email);
+      setMessage("Code sent! Check your email.");
     } catch (err) {
       console.error(err);
-      alert("Login failed. Please try again.");
+      alert("Failed to send code. Please try again.");
+    }
+    setIsLoading(false);
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp) return;
+    setIsLoading(true);
+    try {
+      const u = await apiService.verifyOtp(email, otp);
+      setUser(u);
+      navigate('/history');
+    } catch (err) {
+      console.error(err);
+      alert("Invalid code. Please try again.");
     }
     setIsLoading(false);
   };
@@ -56,22 +71,54 @@ export const Account: React.FC = () => {
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
-                placeholder="you@example.com"
-              />
-            </div>
-            <Button fullWidth isLoading={isLoading} type="submit">
-              Send Login Link
-            </Button>
-            <p className="text-xs text-center text-slate-400">
-              We'll email you a magic link to sign in instantly.
+            {!message ? (
+              // Step 1: Email Input
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <Button fullWidth isLoading={isLoading} type="submit">
+                  Send Verification Code
+                </Button>
+              </>
+            ) : (
+              // Step 2: Code Input
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Verification Code</label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 text-center tracking-widest text-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="123456"
+                  />
+                </div>
+                <Button fullWidth isLoading={isLoading} onClick={handleVerify}>
+                  Verify & Login
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setMessage(null)}
+                  className="w-full text-center text-sm text-slate-400 hover:text-slate-600 mt-2"
+                >
+                  Back to Email
+                </button>
+              </>
+            )}
+
+            <p className="text-xs text-center text-slate-400 mt-4">
+              We'll email you a secure code to sign in instantly.
             </p>
           </form>
 

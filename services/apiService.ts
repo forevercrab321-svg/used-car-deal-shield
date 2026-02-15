@@ -20,13 +20,24 @@ const mapDbDealToType = (dbDeal: any): Deal => ({
 });
 
 export const apiService = {
-    // 1. Auth (Keep using Supabase SDK for robust Auth, as Backend /auth/login was a "min viable" fallback)
-    login: async (email: string) => {
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: { emailRedirectTo: window.location.origin },
+    // 1. Auth (Custom OTP Flow)
+    sendOtp: async (email: string) => {
+        // Call backend to send code via Resend
+        await apiService._fetchApi('/auth/otp/send', 'POST', { email });
+    },
+
+    verifyOtp: async (email: string, code: string) => {
+        // Call backend to verify code and get session
+        const data = await apiService._fetchApi('/auth/otp/verify', 'POST', { email, code });
+
+        // Update Supabase session manually since we got token from backend
+        const { error } = await supabase.auth.setSession({
+            access_token: data.token,
+            refresh_token: data.refreshToken
         });
         if (error) throw error;
+
+        return data.user;
     },
 
     getCurrentUser: async (): Promise<User | null> => {
