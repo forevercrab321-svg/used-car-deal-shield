@@ -159,17 +159,23 @@ export const apiService = {
 
         if (res.requiresPayment) return { requires_payment: true };
 
-        // Map report
+        // Map report - align backend fields to frontend types
         const r = res.report;
         return {
             report: {
-                report_id: 'generated', // Backend might not return ID in JSON, mock it
+                report_id: r.id || 'generated',
                 deal_id: dealId,
                 deal_score: r.score,
-                score_category: r.score > 80 ? 'Excellent' : r.score > 60 ? 'Fair' : 'Risky', // or use backend category
-                red_flags: r.red_flags,
+                score_category: r.category || (r.score > 80 ? 'Excellent' : r.score > 60 ? 'Fair' : 'Risky'),
+                red_flags: (r.red_flags || []).map((f: any) => ({
+                    name: f.title || f.name,
+                    severity: f.severity,
+                    description: f.explanation || f.description,
+                    suggested_action: f.negotiation_line || f.suggested_action,
+                    estimated_savings: f.estimated_savings || 0
+                })),
                 target_otd_range: r.target_otd_range,
-                negotiation_script: r.scripts,
+                negotiation_script: r.scripts || r.negotiation_script,
                 summary: r.summary
             }
         };

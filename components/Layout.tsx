@@ -43,7 +43,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 New Scan
               </Link>
             )}
-            
+
             {user ? (
               <>
                 <Link to="/history" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1">
@@ -63,7 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </nav>
 
           {/* Mobile Menu Toggle */}
-          <button 
+          <button
             className="md:hidden p-2 text-slate-600"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
@@ -74,9 +74,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Mobile Nav */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-4 shadow-lg">
-             <Link to="/upload" onClick={() => setIsMenuOpen(false)} className="block text-base font-medium text-slate-600">Scan Deal</Link>
-             <Link to="/history" onClick={() => setIsMenuOpen(false)} className="block text-base font-medium text-slate-600">History</Link>
-             <Link to="/account" onClick={() => setIsMenuOpen(false)} className="block text-base font-medium text-slate-600">Account</Link>
+            <Link to="/upload" onClick={() => setIsMenuOpen(false)} className="block text-base font-medium text-slate-600">Scan Deal</Link>
+            <Link to="/history" onClick={() => setIsMenuOpen(false)} className="block text-base font-medium text-slate-600">History</Link>
+            <Link to="/account" onClick={() => setIsMenuOpen(false)} className="block text-base font-medium text-slate-600">Account</Link>
           </div>
         )}
       </header>
@@ -85,6 +85,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main className="flex-1 w-full max-w-7xl mx-auto">
         {children}
       </main>
+
+      {/* Footer */}
+      <footer className="w-full border-t border-slate-200 bg-white mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-600 text-white">
+                <ShieldCheck size={14} />
+              </div>
+              <span className="text-sm font-semibold text-slate-700">Deal Shield</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-slate-500">
+              <Link to="/upload" className="hover:text-indigo-600 transition-colors">Scan Deal</Link>
+              <Link to="/history" className="hover:text-indigo-600 transition-colors">History</Link>
+              <Link to="/account" className="hover:text-indigo-600 transition-colors">Account</Link>
+            </div>
+            <p className="text-xs text-slate-400">© 2026 Deal Shield. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

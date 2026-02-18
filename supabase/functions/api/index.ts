@@ -15,11 +15,12 @@ app.use('*', async (c, next) => {
 
 
 // 1. Middleware & Setup
-const FRONTEND_ORIGIN = Deno.env.get('FRONTEND_ORIGIN') || '*';
+const FRONTEND_ORIGIN = Deno.env.get('FRONTEND_ORIGIN') || '';
+const CORS_ORIGIN = FRONTEND_ORIGIN || '*';
 
 // Global CORS - verify it applies to all paths including /api
 app.use('*', cors({
-    origin: FRONTEND_ORIGIN,
+    origin: CORS_ORIGIN,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     exposeHeaders: ['Content-Length'],
@@ -366,7 +367,7 @@ app.post('/deals/parse', async (c) => {
     If a field is missing, use null or 0.
     `;
 
-    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -438,11 +439,14 @@ app.post('/billing/checkout', async (c) => {
     if (deal?.paid) return c.json({ error: "Already paid" }, 400);
 
     const priceId = Deno.env.get('STRIPE_PRICE_ID');
+    if (!priceId) return c.json({ error: 'Server misconfigured (Missing Stripe Price ID)' }, 500);
+
+    const frontendUrl = FRONTEND_ORIGIN || c.req.header('Origin') || c.req.header('Referer')?.replace(/\/[^/]*$/, '') || 'http://localhost:3000';
     const session = await stripe.checkout.sessions.create({
         line_items: [{ price: priceId, quantity: 1 }],
         mode: 'payment',
-        success_url: `${FRONTEND_ORIGIN}/report/${dealId}?success=1`,
-        cancel_url: `${FRONTEND_ORIGIN}/paywall/${dealId}?canceled=1`,
+        success_url: `${frontendUrl}/report/${dealId}?success=1`,
+        cancel_url: `${frontendUrl}/paywall/${dealId}?canceled=1`,
         metadata: {
             dealId: dealId,
             userId: user.id
@@ -510,7 +514,7 @@ app.post('/deals/analyze', async (c) => {
   `;
 
     const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

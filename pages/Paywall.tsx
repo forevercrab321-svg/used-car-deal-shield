@@ -1,27 +1,20 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Check, Lock, ShieldCheck } from 'lucide-react';
 import { Button } from '../components/Button';
 import { apiService } from '../services/apiService';
 
 export const Paywall: React.FC = () => {
   const { dealId } = useParams();
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleUnlock = async () => {
     if (!dealId) return;
     setIsLoading(true);
     try {
-      // 1. Get Checkout URL (Simulated)
       const url = await apiService.createCheckoutSession(dealId);
-      // 2. Mock Redirect (In real app, window.location.href = url)
-      // Since our mock returns a local path with success param:
-      if (url.startsWith('/')) {
-        navigate(url);
-      } else {
-        window.location.href = url;
-      }
+      // Redirect to Stripe Checkout
+      window.location.href = url;
     } catch (e) {
       console.error(e);
       setIsLoading(false);
@@ -40,9 +33,9 @@ export const Paywall: React.FC = () => {
 
       <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
-        
+
         <div className="flex items-end justify-center mb-8 gap-2">
-          <span className="text-5xl font-extrabold text-slate-900">$9.99</span>
+          <span className="text-5xl font-extrabold text-slate-900">$19.99</span>
           <span className="text-slate-500 font-medium mb-2">/ report</span>
         </div>
 
@@ -63,19 +56,19 @@ export const Paywall: React.FC = () => {
           ))}
         </div>
 
-        <Button 
-          fullWidth 
-          size="lg" 
+        <Button
+          fullWidth
+          size="lg"
           onClick={handleUnlock}
           isLoading={isLoading}
           className="py-4 text-lg bg-slate-900 hover:bg-slate-800"
         >
           Unlock Full Report
         </Button>
-        
+
         <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-400">
-           <ShieldCheck size={14} />
-           100% Secure Payment via Stripe
+          <ShieldCheck size={14} />
+          100% Secure Payment via Stripe
         </div>
       </div>
     </div>
