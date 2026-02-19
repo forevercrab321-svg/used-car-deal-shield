@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, Check, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Copy, Check, AlertTriangle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import { Report as ReportType } from '../types';
 import { Button } from '../components/Button';
@@ -11,6 +11,7 @@ export const Report: React.FC = () => {
   const navigate = useNavigate();
 
   const [report, setReport] = useState<ReportType | null>(null);
+  const [deal, setDeal] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copiedScript, setCopiedScript] = useState<'email' | 'in_person' | null>(null);
 
@@ -24,7 +25,14 @@ export const Report: React.FC = () => {
 
     const loadData = async () => {
       try {
-        const result = await apiService.analyzeDeal(dealId);
+        // Fetch Deal and Report in parallel
+        const [dealData, result] = await Promise.all([
+          apiService.getDeal(dealId),
+          apiService.analyzeDeal(dealId)
+        ]);
+
+        if (dealData) setDeal(dealData);
+
         if (result.requires_payment) {
           navigate(`/paywall/${dealId}`);
         } else if (result.report) {
@@ -45,20 +53,35 @@ export const Report: React.FC = () => {
     setTimeout(() => setCopiedScript(null), 2000);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-indigo-600 rounded-full border-t-transparent"></div></div>;
   if (!report) return null;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 pb-20">
-      <Button variant="outline" size="sm" onClick={() => navigate('/history')} className="mb-6">
-        <ArrowLeft size={16} className="mr-2" /> Back to History
-      </Button>
+    <div className="max-w-4xl mx-auto px-4 py-8 pb-20 print:p-0">
+      <div className="flex justify-between items-center mb-6 print:hidden">
+        <Button variant="outline" size="sm" onClick={() => navigate('/history')}>
+          <ArrowLeft size={16} className="mr-2" /> Back to History
+        </Button>
+        <Button size="sm" variant="outline" onClick={handlePrint}>
+          Download PDF / Print
+        </Button>
+      </div>
 
       {/* Header Card */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Analysis Result</h1>
-          <p className="text-slate-500">ID: {dealId}</p>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {deal?.extracted_fields?.vehicle_name || deal?.extracted_fields?.vehicle || 'Vehicle Analysis'}
+          </h1>
+          <p className="text-slate-500 text-sm">
+            Dealer Offer: <span className="font-bold text-slate-900">${(deal?.extracted_fields?.otd_price || deal?.extracted_fields?.price || 0).toLocaleString()}</span>
+            <span className="mx-2">•</span>
+            ID: {dealId?.slice(0, 8)}
+          </p>
         </div>
         <div className="flex gap-4 items-center">
           <div className="text-right">
@@ -77,6 +100,37 @@ export const Report: React.FC = () => {
 
         {/* Left: Issues */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Action Plan - NEW */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-md p-6 text-white">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <ShieldCheck size={20} />
+              Your Action Plan
+            </h2>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="bg-white/20 p-1.5 rounded-full mt-0.5 font-bold text-xs">1</div>
+                <div>
+                  <p className="font-bold text-sm">Download & Print this Report</p>
+                  <p className="text-indigo-100 text-xs">Bring it to the dealership. Showing physical proof of market data gives you authority.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="bg-white/20 p-1.5 rounded-full mt-0.5 font-bold text-xs">2</div>
+                <div>
+                  <p className="font-bold text-sm">Send the Email Script First</p>
+                  <p className="text-indigo-100 text-xs">Before going in, send the email below to multiple dealers to start a bidding war.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="bg-white/20 p-1.5 rounded-full mt-0.5 font-bold text-xs">3</div>
+                <div>
+                  <p className="font-bold text-sm">Refuse the "Red Flags"</p>
+                  <p className="text-indigo-100 text-xs">Use the specific lines below to refuse each fee. Be ready to walk away.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <AlertTriangle className="text-red-500" size={20} />
             Detected Red Flags

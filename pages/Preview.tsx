@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Lock, AlertTriangle, ChevronRight, Shield } from 'lucide-react';
+import { Lock, AlertTriangle, ChevronRight, Shield, Check } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import { Deal } from '../types';
 import { Button } from '../components/Button';
@@ -135,8 +135,8 @@ export const Preview: React.FC = () => {
       ) : (
         /* Locked Analysis Preview - Skip if Admin or Paid */
         (!deal.paid && user?.role !== 'admin') ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
-            <div className="absolute inset-0 z-10 bg-white/10 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative min-h-[600px]">
+            <div className="relative z-10 bg-white/10 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center min-h-[600px]">
               <Lock size={40} className="text-slate-800 mb-4 drop-shadow-md" />
               <h3 className="text-xl font-bold text-slate-900 mb-2 drop-shadow-sm">Full Analysis Locked</h3>
               <p className="text-slate-900 font-medium mb-6 drop-shadow-sm max-w-sm">
@@ -173,8 +173,8 @@ export const Preview: React.FC = () => {
             </div>
 
             {/* Blurred Content Background */}
-            <div className="p-6 opacity-30 select-none filter blur-sm">
-              <div className="flex justify-between mb-6">
+            <div className="absolute inset-0 z-0 p-6 opacity-30 select-none filter blur-sm space-y-8">
+              <div className="flex justify-between">
                 <div>
                   <p className="text-sm text-slate-500 font-bold uppercase">Deal Score</p>
                   <p className="text-3xl font-bold text-red-500">42/100</p>
@@ -184,10 +184,22 @@ export const Preview: React.FC = () => {
                   <p className="text-3xl font-bold text-slate-900">3 Found</p>
                 </div>
               </div>
+
               <div className="space-y-4">
                 <div className="h-4 bg-slate-200 rounded w-3/4"></div>
                 <div className="h-4 bg-slate-200 rounded w-full"></div>
                 <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                <div className="h-4 bg-slate-200 rounded w-4/5"></div>
+                <div className="h-4 bg-slate-200 rounded w-full"></div>
+                <div className="h-4 bg-slate-200 rounded w-2/3"></div>
+                <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                <div className="h-4 bg-slate-200 rounded w-full"></div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-slate-200">
+                <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
+                <div className="h-4 bg-slate-200 rounded w-full"></div>
+                <div className="h-4 bg-slate-200 rounded w-full"></div>
               </div>
             </div>
           </div>
