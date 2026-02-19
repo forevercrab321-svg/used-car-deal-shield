@@ -573,8 +573,10 @@ app.post('/deals/analyze', async (c) => {
     const prompt = `
     You are an expert car buyer advocate and negotiator. Analyze this deal data: ${dealContext}.
     
-    Start by cross-referencing the vehicle price with current market values (KBB, Edmunds, NADA trends for this vehicle).
-    Identify hidden fees, fake add-ons, and inflated markups.
+    IMPORTANT: You MUST use Google Search to find the CURRENT market value for this specific vehicle (Year, Make, Model, Trim) from authoritative sources like KBB, Edmunds, or NADA.
+    Do NOT rely on your internal training data for pricing. Cite the specific date and source of the pricing you found.
+
+    Identify hidden fees, fake add-ons, and inflated markups based on standard industry practices.
     
     Return ONLY valid JSON in this structure:
     {
@@ -583,7 +585,7 @@ app.post('/deals/analyze', async (c) => {
         {
           "title": "string (Name of the fee/issue)",
           "severity": "high"|"medium"|"low", 
-          "explanation": "string (Why this is bad. CITE YOUR SOURCES like 'According to Edmunds...' or 'Standard industry practice is...')", 
+          "explanation": "string (Explain why this is bad. EXPLICITLY CITE your search results, e.g., 'According to current KBB listings found today...')", 
           "estimated_savings": number, 
           "negotiation_line": "string (What to say to remove it)" 
         } 
@@ -593,7 +595,7 @@ app.post('/deals/analyze', async (c) => {
         "email": "string (Draft a cold, professional email to the dealer citing the specific fees and market data to refuse)", 
         "in_person": "string (Script for face-to-face negotiation, focusing on 'walking away' leverage)" 
       },
-      "summary": "string (Short 2 sentence summary calling out the biggest rip-off and referencing the fair market value range.)"
+      "summary": "string (Short 2 sentence summary calling out the biggest rip-off and referencing the fair market value range found in search.)"
     }
     No markdown, just raw JSON.
   `;
@@ -603,7 +605,8 @@ app.post('/deals/analyze', async (c) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ google_search: {} }] // Enable Google Search Grounding
         })
     });
 
