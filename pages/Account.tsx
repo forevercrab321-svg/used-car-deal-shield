@@ -141,80 +141,46 @@ export const Account: React.FC = () => {
                 </p>
               </form>
 
-              {/* Pro Login button */}
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <button
-                  onClick={() => setShowProLogin(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold hover:from-amber-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg"
-                >
-                  <Shield size={18} />
-                  Pro Login
-                </button>
-              </div>
-            </>
-          ) : (
-            /* Pro Login Form */
-            <form onSubmit={handleAdminLogin} className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Shield size={20} className="text-amber-500" />
-                <h2 className="text-lg font-semibold text-slate-800">Pro Developer Login</h2>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Admin Password</label>
-                <input
-                  type="password"
-                  required
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-100 focus:border-amber-500 outline-none transition-all"
-                  placeholder="Enter admin password"
-                />
-              </div>
-              <Button fullWidth isLoading={isLoading} type="submit">
-                Login as Pro
-              </Button>
-              <button
-                type="button"
-                onClick={() => setShowProLogin(false)}
-                className="w-full text-center text-sm text-slate-400 hover:text-slate-600 mt-2"
-              >
-                Back to Email Login
-              </button>
             </form>
+        </>
           )}
-
-        </div>
       </div>
+      </div >
     );
   }
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-16">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-            <UserIcon size={32} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
-            <p className="text-slate-500">{user.email}</p>
-          </div>
+        </div >
+      </div >
+    );
+  }
+
+return (
+  <div className="max-w-2xl mx-auto px-4 py-16">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+      <div className="flex items-center gap-4 mb-8">
+        <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+          <UserIcon size={32} />
         </div>
-
-        <div className="space-y-4">
-          <Button variant="outline" fullWidth onClick={() => navigate('/history')}>
-            View Scan History
-          </Button>
-
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 py-3 rounded-xl transition-colors font-medium"
-          >
-            <LogOut size={18} />
-            Sign Out
-          </button>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
+          <p className="text-slate-500">{user.email}</p>
         </div>
       </div>
+
+      <div className="space-y-4">
+        <Button variant="outline" fullWidth onClick={() => navigate('/history')}>
+          View Scan History
+        </Button>
+
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 py-3 rounded-xl transition-colors font-medium"
+        >
+          <LogOut size={18} />
+          Sign Out
+        </button>
+      </div>
     </div>
-  );
+  </div>
+);
 };

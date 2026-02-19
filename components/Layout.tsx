@@ -100,7 +100,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Link to="/upload" className="hover:text-indigo-600 transition-colors">Scan Deal</Link>
               <Link to="/history" className="hover:text-indigo-600 transition-colors">History</Link>
               <Link to="/account" className="hover:text-indigo-600 transition-colors">Account</Link>
-              <Link to="/admin" className="hover:text-indigo-600 transition-colors">Admin</Link>
             </div>
             <p className="text-xs text-slate-400">© 2026 Deal Shield. All rights reserved.</p>
           </div>
