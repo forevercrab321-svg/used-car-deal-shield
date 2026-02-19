@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Lock, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Lock, AlertTriangle, ChevronRight, Shield } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import { Deal } from '../types';
 import { Button } from '../components/Button';
@@ -139,15 +139,37 @@ export const Preview: React.FC = () => {
             <div className="absolute inset-0 z-10 bg-white/10 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center">
               <Lock size={40} className="text-slate-800 mb-4 drop-shadow-md" />
               <h3 className="text-xl font-bold text-slate-900 mb-2 drop-shadow-sm">Full Analysis Locked</h3>
-              <p className="text-slate-900 font-medium mb-6 drop-shadow-sm">Unlock to see the Red Flags and Negotiation Script.</p>
+              <p className="text-slate-900 font-medium mb-6 drop-shadow-sm max-w-sm">
+                Unlock the full report to see exactly where you're overpaying and how to fix it.
+              </p>
+
+              {/* Value Checklist */}
+              <div className="bg-white/80 p-4 rounded-xl shadow-lg mb-6 text-left space-y-2 border border-white/50 backdrop-blur-md">
+                <p className="text-sm font-bold text-slate-900 border-b border-slate-200 pb-2 mb-2">What you get:</p>
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <span className="text-green-600">✓</span> <span>Line-by-line Fee Analysis</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <span className="text-green-600">✓</span> <span>Custom Negotiation Scripts</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <span className="text-green-600">✓</span> <span>Live Market Price Check (KBB/Edmunds)</span>
+                </div>
+              </div>
+
               <Button
                 onClick={() => navigate(`/paywall/${dealId}`)}
-                className="px-8 py-4 text-base shadow-xl"
+                className="px-8 py-4 text-base shadow-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 border-none"
                 fullWidth
               >
-                Unlock Report
+                Unlock Report - $19.99
                 <ChevronRight size={20} className="ml-1" />
               </Button>
+
+              <div className="mt-4 flex items-center justify-center gap-1 text-xs font-semibold text-slate-600 bg-white/50 px-3 py-1 rounded-full">
+                <Shield size={12} className="text-indigo-600" />
+                <span>100% Money Back Guarantee</span>
+              </div>
             </div>
 
             {/* Blurred Content Background */}

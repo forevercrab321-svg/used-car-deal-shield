@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload as UploadIcon, FileText, X, AlertCircle, MapPin } from 'lucide-react';
+import { Upload as UploadIcon, FileText, X, AlertCircle, MapPin, Shield } from 'lucide-react';
 import { Button } from '../components/Button';
 import { apiService } from '../services/apiService';
 
@@ -137,6 +137,19 @@ export const Upload: React.FC = () => {
               <p className="text-sm font-medium">{error}</p>
             </div>
           )}
+
+          {/* Security Reassurance */}
+          <div className="mt-6 flex flex-col items-center justify-center text-center space-y-2">
+            <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
+              <div className="bg-green-100 p-1 rounded-full text-green-600">
+                <Shield size={14} /> {/* Assuming Shield is imported or I need to import Lock */}
+              </div>
+              <span>Bank-Level 256-bit Encryption</span>
+            </div>
+            <p className="text-xs text-slate-400 max-w-xs">
+              Your deal is analyzed privately. We <strong>never</strong> share your personal data with dealerships or third parties.
+            </p>
+          </div>
         </div>
 
         {/* Action */}

@@ -37,14 +37,20 @@ export const Landing: React.FC = () => {
 
           <Link to="/upload">
             <Button size="lg" className="px-10 py-5 text-lg shadow-xl shadow-indigo-200 hover:shadow-indigo-300 transition-all transform hover:-translate-y-1">
-              Scan Deal Sheet
+              Start Free Scan
               <ArrowRight className="ml-2 h-6 w-6" />
             </Button>
           </Link>
 
-          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-400">
-            <Scan size={16} />
-            <span>Supports PDF, JPG, PNG</span>
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-slate-500 bg-white/50 px-4 py-1.5 rounded-full border border-slate-100 backdrop-blur-sm">
+              <Shield size={14} className="text-green-600" />
+              <span className="font-semibold text-slate-700">100% Money Back Guarantee</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+              <Scan size={14} />
+              <span>Supports PDF, JPG, PNG</span>
+            </div>
           </div>
         </div>
       </section>
