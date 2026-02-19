@@ -642,7 +642,47 @@ app.post('/deals/analyze', async (c) => {
     return c.json({ report: reportData });
 });
 
-// 10. Webhook
+// 11. Reviews API
+app.get('/reviews', async (c) => {
+    const { data: reviews, error } = await supabase
+        .from('reviews')
+        .select('created_at, rating, comment')
+        .eq('is_verified', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ reviews });
+});
+
+app.post('/reviews', async (c) => {
+    const user = await getUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const { dealId, rating, comment } = await c.req.json();
+
+    // Verify deal ownership and payment
+    const { data: deal } = await supabase.from('deals').select('user_id, paid').eq('id', dealId).single();
+
+    if (!deal) return c.json({ error: 'Deal not found' }, 404);
+    if (deal.user_id !== user.id) return c.json({ error: 'Unauthorized' }, 403);
+    if (!deal.paid && user.user_metadata?.role !== 'admin') {
+        return c.json({ error: 'Only verified buyers can leave reviews' }, 403);
+    }
+
+    const { error: dbError } = await supabase.from('reviews').insert({
+        user_id: user.id,
+        deal_id: dealId,
+        rating,
+        comment,
+        is_verified: true
+    });
+
+    if (dbError) return c.json({ error: dbError.message }, 500);
+    return c.json({ success: true });
+});
+
+// 12. Webhook
 app.post('/stripe/webhook', async (c) => {
     const signature = c.req.header('Stripe-Signature');
     const body = await c.req.text();

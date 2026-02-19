@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Scan, ShieldAlert, FileSearch, ArrowRight, Shield, Star, CheckCircle, Zap, DollarSign, HelpCircle } from 'lucide-react';
 import { Button } from '../components/Button';
+import { ReviewsSection } from '../components/ReviewsSection';
 
 const FAQ_ITEMS = [
   { q: "What documents can I upload?", a: "We support PDF files, photos (JPG/PNG) of buyer's orders, deal sheets, and finance agreements from any dealership." },
@@ -180,31 +181,8 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="w-full bg-white py-20 border-t border-slate-100">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-3xl font-extrabold text-center text-slate-900 mb-12">What Our Users Say</h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { name: "Mike T.", savings: "$3,200", quote: "Found hidden market adjustment and a GPS fee I didn't ask for. The negotiation script worked perfectly." },
-              { name: "Sarah L.", savings: "$1,800", quote: "I was about to sign when I scanned the deal. Saved almost $2k in inflated doc fees and add-ons." },
-              { name: "Jason R.", savings: "$4,500", quote: "The dealer actually respected me more when I quoted specific fee names. Saved a fortune on my truck." },
-            ].map((t, i) => (
-              <div key={i} className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(5)].map((_, j) => <Star key={j} size={16} className="text-amber-400 fill-amber-400" />)}
-                </div>
-                <p className="text-slate-600 mb-4 leading-relaxed">"{t.quote}"</p>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900">— {t.name}</span>
-                  <span className="text-sm bg-green-50 text-green-700 font-bold px-2 py-1 rounded-lg">Saved {t.savings}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Real Reviews */}
+      <ReviewsSection />
 
       {/* FAQ */}
       <section className="w-full bg-slate-50 py-20 border-t border-slate-100">

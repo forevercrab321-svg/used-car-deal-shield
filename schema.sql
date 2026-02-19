@@ -87,3 +87,22 @@ alter table public.verification_codes enable row level security;
 -- insert into storage.buckets (id, name, public) values ('deal_files', 'deal_files', true);
 -- create policy "Authenticated users can upload" on storage.objects for insert to authenticated with check ( bucket_id = 'deal_files' and auth.uid() = owner );
 -- create policy "Users can view own files" on storage.objects for select to authenticated using ( bucket_id = 'deal_files' and auth.uid() = owner );
+-- Reviews Table (Verified Buyers Only)
+create table public.reviews (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  deal_id uuid references public.deals not null unique,
+  rating integer check (rating >= 1 and rating <= 5),
+  comment text,
+  is_verified boolean default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- RLS for Reviews
+alter table public.reviews enable row level security;
+
+create policy "Reviews are viewable by everyone" on public.reviews
+  for select using (true);
+
+create policy "Users can insert their own reviews for paid deals" on public.reviews
+  for insert with check (auth.uid() = user_id);

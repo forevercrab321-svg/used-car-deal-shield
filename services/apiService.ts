@@ -194,5 +194,15 @@ export const apiService = {
         const { data } = await supabase.from('deals').select('*').eq('user_id', user.user_id).order('created_at', { ascending: false });
         // @ts-ignore
         return (data || []).map(mapDbDealToType);
+    },
+
+    // 8. Reviews
+    getReviews: async () => {
+        const res = await apiService._fetchApi('/reviews', 'GET', undefined, false);
+        return res.reviews;
+    },
+
+    submitReview: async (dealId: string, rating: number, comment: string) => {
+        return await apiService._fetchApi('/reviews', 'POST', { dealId, rating, comment });
     }
 };

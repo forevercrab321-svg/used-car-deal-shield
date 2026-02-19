@@ -9,7 +9,7 @@ export const Report: React.FC = () => {
   const { dealId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   const [report, setReport] = useState<ReportType | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedScript, setCopiedScript] = useState<'email' | 'in_person' | null>(null);
@@ -51,7 +51,7 @@ export const Report: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-20">
       <Button variant="outline" size="sm" onClick={() => navigate('/history')} className="mb-6">
-        <ArrowLeft size={16} className="mr-2"/> Back to History
+        <ArrowLeft size={16} className="mr-2" /> Back to History
       </Button>
 
       {/* Header Card */}
@@ -74,14 +74,14 @@ export const Report: React.FC = () => {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        
+
         {/* Left: Issues */}
         <div className="lg:col-span-2 space-y-6">
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <AlertTriangle className="text-red-500" size={20} />
             Detected Red Flags
           </h2>
-          
+
           {report.red_flags.map((flag, idx) => (
             <div key={idx} className="bg-white rounded-xl shadow-sm border border-red-100 p-5 relative overflow-hidden">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
@@ -101,41 +101,105 @@ export const Report: React.FC = () => {
         {/* Right: Scripts */}
         <div className="space-y-6">
           <h2 className="text-lg font-bold text-slate-900">Negotiation Scripts</h2>
-          
+
           {/* Email Script */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-             <div className="flex justify-between items-center mb-3">
-               <h3 className="font-bold text-slate-800 text-sm">Email Template</h3>
-               <button 
-                 onClick={() => handleCopy(report.negotiation_script.email, 'email')}
-                 className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-md transition-colors"
-               >
-                 {copiedScript === 'email' ? <Check size={18} /> : <Copy size={18} />}
-               </button>
-             </div>
-             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 max-h-60 overflow-y-auto text-xs leading-relaxed text-slate-700 whitespace-pre-wrap">
-               {report.negotiation_script.email}
-             </div>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-slate-800 text-sm">Email Template</h3>
+              <button
+                onClick={() => handleCopy(report.negotiation_script.email, 'email')}
+                className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-md transition-colors"
+              >
+                {copiedScript === 'email' ? <Check size={18} /> : <Copy size={18} />}
+              </button>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 max-h-60 overflow-y-auto text-xs leading-relaxed text-slate-700 whitespace-pre-wrap">
+              {report.negotiation_script.email}
+            </div>
           </div>
 
           {/* In Person Script */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-             <div className="flex justify-between items-center mb-3">
-               <h3 className="font-bold text-slate-800 text-sm">In-Person Script</h3>
-               <button 
-                 onClick={() => handleCopy(report.negotiation_script.in_person, 'in_person')}
-                 className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-md transition-colors"
-               >
-                 {copiedScript === 'in_person' ? <Check size={18} /> : <Copy size={18} />}
-               </button>
-             </div>
-             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 max-h-60 overflow-y-auto text-xs leading-relaxed text-slate-700 whitespace-pre-wrap">
-               {report.negotiation_script.in_person}
-             </div>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-slate-800 text-sm">In-Person Script</h3>
+              <button
+                onClick={() => handleCopy(report.negotiation_script.in_person, 'in_person')}
+                className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-md transition-colors"
+              >
+                {copiedScript === 'in_person' ? <Check size={18} /> : <Copy size={18} />}
+              </button>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 max-h-60 overflow-y-auto text-xs leading-relaxed text-slate-700 whitespace-pre-wrap">
+              {report.negotiation_script.in_person}
+            </div>
           </div>
+        </div>
+
+        {/* Review Submission Section */}
+        <div className="mt-12 bg-indigo-50 rounded-2xl p-8 text-center border border-indigo-100">
+          <h2 className="text-xl font-bold text-indigo-900 mb-2">How much did we help you save?</h2>
+          <p className="text-indigo-700 mb-6 max-w-lg mx-auto">Your feedback helps other buyers know this is real. Please leave a verified review.</p>
+
+          <ReviewForm dealId={dealId || ''} />
         </div>
 
       </div>
     </div>
+  );
+};
+
+const ReviewForm = ({ dealId }: { dealId: string }) => {
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await apiService.submitReview(dealId, rating, comment);
+      setSubmitted(true);
+    } catch (err) {
+      alert("Failed to submit review. You may have already reviewed this deal.");
+    }
+    setLoading(false);
+  };
+
+  if (submitted) {
+    return (
+      <div className="bg-white p-6 rounded-xl inline-flex items-center gap-2 text-green-700 font-bold shadow-sm">
+        <Check size={20} />
+        Thank you for your review!
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
+      <div className="flex justify-center gap-2 mb-4">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => setRating(star)}
+            className={`text-2xl transition-transform hover:scale-110 ${star <= rating ? 'text-amber-400' : 'text-slate-200'}`}
+          >
+            ★
+          </button>
+        ))}
+      </div>
+      <textarea
+        required
+        className="w-full p-3 rounded-lg border border-slate-200 mb-4 focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+        rows={3}
+        placeholder="Share your experience... (e.g. Saved $2,000 on dealership fees!)"
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+      />
+      <Button fullWidth size="sm" type="submit" isLoading={loading}>
+        Submit Verified Review
+      </Button>
+    </form>
   );
 };
