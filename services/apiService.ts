@@ -103,14 +103,19 @@ export const apiService = {
     // 2. File Upload Flow (Using Backend Presign)
     uploadDealFile: async (file: File): Promise<{ fileId: string; filePath: string }> => {
         // Step A: Get Presigned URL from Backend
-        const { uploadUrl, fileUrl } = await apiService._fetchApi('/files/presign', 'POST', {});
+        const fileExt = file.name.split('.').pop();
+        const { uploadUrl, fileUrl } = await apiService._fetchApi('/files/presign', 'POST', { fileExt });
 
         // Step B: Upload directly to Storage (PUT)
-        await fetch(uploadUrl, {
+        const uploadRes = await fetch(uploadUrl, {
             method: 'PUT',
             body: file,
             headers: { 'Content-Type': file.type }
         });
+
+        if (!uploadRes.ok) {
+            throw new Error(`Upload failed: ${uploadRes.statusText}`);
+        }
 
         // Step C: Confirm Upload (Optional based on backend logic, but good practice)
         await apiService._fetchApi('/files/confirm', 'POST', { fileUrl });

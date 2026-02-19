@@ -8,6 +8,7 @@ import { Paywall } from './pages/Paywall';
 import { Report } from './pages/Report';
 import { History } from './pages/History';
 import { Account } from './pages/Account';
+import { AdminLogin } from './pages/AdminLogin';
 
 const App: React.FC = () => {
   return (
@@ -21,6 +22,7 @@ const App: React.FC = () => {
           <Route path="/report/:dealId" element={<Report />} />
           <Route path="/history" element={<History />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/admin" element={<AdminLogin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

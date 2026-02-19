@@ -30,3 +30,4 @@ dist-ssr
 .npm
 .vscode
 supabase/functions/**/.env
+.env

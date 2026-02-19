@@ -1,5 +1,5 @@
 
-import { serve } from 'std/http/server.ts';
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
@@ -13,16 +13,42 @@ app.use('*', async (c, next) => {
     await next();
 });
 
+app.onError((err, c) => {
+    console.error('GLOBAL ERROR:', err);
+    return c.json({ error: err.message, stack: err.stack }, 500);
+});
+
 
 // 1. Middleware & Setup
 const FRONTEND_ORIGIN = Deno.env.get('FRONTEND_ORIGIN') || '';
 const CORS_ORIGIN = FRONTEND_ORIGIN || '*';
 
 // Global CORS - verify it applies to all paths including /api
+// Global CORS - verify it applies to all paths including /api
 app.use('*', cors({
-    origin: CORS_ORIGIN,
+    origin: (origin) => {
+        // Allow requests with no origin (e.g. mobile apps or curl)
+        if (!origin) return FRONTEND_ORIGIN;
+
+        // Allow localhost (any port)
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+            return origin;
+        }
+
+        // Allow Vercel deployments
+        if (origin.endsWith('.vercel.app')) {
+            return origin;
+        }
+
+        // Allow configured production origin
+        if (origin === FRONTEND_ORIGIN) {
+            return origin;
+        }
+
+        return FRONTEND_ORIGIN;
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
+    allowHeaders: ['Content-Type', 'Authorization', 'Stripe-Signature'],
     exposeHeaders: ['Content-Length'],
     maxAge: 600,
     credentials: true,
@@ -297,11 +323,15 @@ app.get('/me', async (c) => {
 });
 
 // 4. File Presign
+// 4. File Presign
 app.post('/files/presign', async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    const fileId = `uploads/${user.id}/${crypto.randomUUID()}.pdf`; // Using .pdf as default extension for simplicity, or we could pass extension from frontend
+    const { fileExt } = await c.req.json();
+    const ext = fileExt ? fileExt.replace('.', '') : 'pdf';
+    const fileId = `uploads/${user.id}/${crypto.randomUUID()}.${ext}`;
+
     const { data, error } = await supabase.storage
         .from('deal_files')
         .createSignedUploadUrl(fileId, 3600); // 1 hour expiry
@@ -314,6 +344,17 @@ app.post('/files/presign', async (c) => {
     });
 });
 
+// Setup Bucket (Temporary)
+app.get('/setup-bucket', async (c) => {
+    const { data, error } = await supabase.storage.createBucket('deal_files', {
+        public: true,
+        fileSizeLimit: 15728640, // 15MB
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'application/pdf']
+    });
+    if (error) return c.json({ error: error.message }, 400);
+    return c.json({ success: true, data });
+});
+
 // 5. File Confirm
 app.post('/files/confirm', async (c) => {
     const user = await getUser(c);
@@ -324,108 +365,138 @@ app.post('/files/confirm', async (c) => {
 
 // 6. Parse Deal
 app.post('/deals/parse', async (c) => {
-    const user = await getUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const { fileId, zip } = await c.req.json();
-    const dealId = crypto.randomUUID();
-
-    // 1. Get Signed URL for Gemini to read
-    const { data: signedData, error: signedError } = await supabase.storage
-        .from('deal_files')
-        .createSignedUrl(fileId, 600); // 10 mins
-
-    if (signedError || !signedData?.signedUrl) {
-        return c.json({ error: 'Could not access file' }, 500);
-    }
-
-    // 2. Call Gemini for parsing
-    const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiKey) return c.json({ error: 'Server misconfigured (Missing AI Key)' }, 500);
-
-    // Fetch file content to base64 for Gemini
-    const fileRes = await fetch(signedData.signedUrl);
-    const fileBlob = await fileRes.blob();
-    const arrayBuffer = await fileBlob.arrayBuffer();
-    const base64File = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    const mimeType = fileBlob.type || 'application/pdf';
-
-    const prompt = `
-    You are an expert OCR for car dealership documents. 
-    Analyze this Buyer's Order / Deal Sheet.
-    Extract the following fields accurately.
-    Return ONLY valid JSON.
-    Structure:
-    {
-        "vehicle": "Year Make Model Trim",
-        "price": number (Selling Price/MSRP),
-        "fees": { "doc_fee": number, "prep_fee": number, "gps": number, "other_add_ons": number },
-        "vin": "string",
-        "mileage": number,
-        "otd_price": number (Out the Door Price / Total Cash Price)
-    }
-    If a field is missing, use null or 0.
-    `;
-
-    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            contents: [{
-                parts: [
-                    { text: prompt },
-                    {
-                        inline_data: {
-                            mime_type: mimeType,
-                            data: base64File
-                        }
-                    }
-                ]
-            }]
-        })
-    });
-
-    const aiJson = await aiRes.json();
-    let extracted;
-
     try {
-        const text = aiJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        const jsonStr = text.replace(/^```json\n|\n```$/g, "").trim();
-        extracted = JSON.parse(jsonStr);
-    } catch (e) {
-        console.error("Gemini Parse Error", e, JSON.stringify(aiJson));
-        // Fallback or error
-        return c.json({ error: "Could not parse document. Please ensure it is a clear image of a deal sheet." }, 400);
-    }
+        const user = await getUser(c);
+        if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    // 3. Construct preview
-    const preview = {
-        vehicle_name: extracted.vehicle || "Unknown Vehicle",
-        price: extracted.otd_price ? `$${extracted.otd_price.toLocaleString()}` : (extracted.price ? `$${extracted.price.toLocaleString()}` : "N/A"),
-        mileage: extracted.mileage ? extracted.mileage.toLocaleString() : "N/A"
-    };
+        const body = await c.req.json();
+        const { fileId, zip } = body;
+        const dealId = crypto.randomUUID();
 
-    // 4. Save to DB
-    const { error } = await supabase.from('deals').insert({
-        id: dealId,
-        user_id: user.id,
-        file_path: fileId,
-        zip_code: zip,
-        status: 'parsed',
-        preview_data: preview,
-        extracted_fields: extracted
-    });
+        console.log(`[PARSE] Starting for user ${user.id}, file: ${fileId}`);
 
-    if (error) return c.json({ error: error.message }, 500);
+        // 1. Get Signed URL for Gemini to read
+        const { data: signedData, error: signedError } = await supabase.storage
+            .from('deal_files')
+            .createSignedUrl(fileId, 600); // 10 mins
 
-    return c.json({
-        dealId,
-        preview,
-        riskHint: {
-            count: 3,
-            message: "We found multiple potential issues. Unlock the $19.99 full report to see exactly what to negotiate."
+        if (signedError || !signedData?.signedUrl) {
+            console.error('[PARSE] Storage Error:', signedError);
+            return c.json({ error: 'Could not access file: ' + (signedError?.message || 'Unknown') }, 500);
         }
-    });
+
+        // 2. Call Gemini for parsing
+        const geminiKey = Deno.env.get('GEMINI_API_KEY');
+        if (!geminiKey) return c.json({ error: 'Server misconfigured (Missing AI Key)' }, 500);
+
+        // Fetch file content to base64 for Gemini
+        const fileRes = await fetch(signedData.signedUrl);
+        if (!fileRes.ok) throw new Error(`Failed to fetch file from storage: ${fileRes.statusText}`);
+
+        const fileBlob = await fileRes.blob();
+        const arrayBuffer = await fileBlob.arrayBuffer();
+
+        // Chunk-based encoding to avoid Maximum Call Stack Size Exceeded
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        const len = bytes.byteLength;
+        const CHUNK_SIZE = 8192; // Safe chunk size
+        for (let i = 0; i < len; i += CHUNK_SIZE) {
+            const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+            binary += String.fromCharCode(...chunk);
+        }
+        const base64File = btoa(binary);
+
+        const mimeType = fileBlob.type || 'application/pdf';
+
+        const prompt = `
+        You are an expert OCR for car dealership documents. 
+        Analyze this Buyer's Order / Deal Sheet.
+        Extract the following fields accurately.
+        Return ONLY valid JSON.
+        Structure:
+        {
+            "vehicle": "Year Make Model Trim",
+            "price": number (Selling Price/MSRP),
+            "fees": { "doc_fee": number, "prep_fee": number, "gps": number, "other_add_ons": number },
+            "vin": "string",
+            "mileage": number,
+            "otd_price": number (Out the Door Price / Total Cash Price)
+        }
+        If a field is missing, use null or 0.
+        `;
+
+        const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        {
+                            inline_data: {
+                                mime_type: mimeType,
+                                data: base64File
+                            }
+                        }
+                    ]
+                }]
+            })
+        });
+
+        if (!aiRes.ok) {
+            const errText = await aiRes.text();
+            console.error('[PARSE] Gemini API Error:', errText);
+            throw new Error(`Gemini API Failed: ${errText}`);
+        }
+
+        const aiJson = await aiRes.json();
+        let extracted;
+
+        try {
+            const text = aiJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            const jsonStr = text.replace(/^```json\n|\n```$/g, "").trim();
+            extracted = JSON.parse(jsonStr);
+        } catch (e) {
+            console.error("Gemini Parse Error", e, JSON.stringify(aiJson));
+            return c.json({ error: "Could not parse document. Please ensure it is a clear image of a deal sheet." }, 400);
+        }
+
+        // 3. Construct preview
+        const preview = {
+            vehicle_name: extracted.vehicle || "Unknown Vehicle",
+            price: extracted.otd_price ? `$${extracted.otd_price.toLocaleString()}` : (extracted.price ? `$${extracted.price.toLocaleString()}` : "N/A"),
+            mileage: extracted.mileage ? extracted.mileage.toLocaleString() : "N/A"
+        };
+
+        // 4. Save to DB
+        const { error: dbError } = await supabase.from('deals').insert({
+            id: dealId,
+            user_id: user.id,
+            file_path: fileId,
+            zip_code: zip,
+            status: 'parsed',
+            preview_data: preview,
+            extracted_fields: extracted
+        });
+
+        if (dbError) {
+            console.error('[PARSE] DB Insert Error:', dbError);
+            return c.json({ error: dbError.message }, 500);
+        }
+
+        return c.json({
+            dealId,
+            preview,
+            riskHint: {
+                count: 3,
+                message: "We found multiple potential issues. Unlock the $19.99 full report to see exactly what to negotiate."
+            }
+        });
+    } catch (e) {
+        console.error('[PARSE] Critical Error:', e);
+        return c.json({ error: e.message, stack: e.stack }, 500);
+    }
 });
 
 // 7. Stripe Checkout
@@ -584,4 +655,15 @@ app.post('/stripe/webhook', async (c) => {
     return c.json({ received: true });
 });
 
-serve(app.fetch);
+app.get('/health', (c) => {
+    return c.json({
+        status: 'ok',
+        env: {
+            supabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+            supabaseKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+            geminiKey: !!Deno.env.get('GEMINI_API_KEY'),
+        }
+    });
+});
+
+Deno.serve(app.fetch);
