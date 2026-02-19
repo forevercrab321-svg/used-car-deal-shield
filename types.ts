@@ -79,3 +79,14 @@ export interface AuthResponse {
   user: User;
   token: string;
 }
+
+export interface Review {
+  id: string;
+  user_id: string;
+  deal_id: string;
+  rating: number; // 1-5
+  comment: string;
+  is_verified: boolean;
+  created_at: string;
+  user_name?: string;
+}

@@ -87,7 +87,7 @@ export const Account: React.FC = () => {
             </div>
           )}
 
-          {!showProLogin ? (
+          {!showProLogin && (
             <>
               <form onSubmit={handleLogin} className="space-y-4">
                 {!message ? (
@@ -140,47 +140,40 @@ export const Account: React.FC = () => {
                   We'll email you a secure code to sign in instantly.
                 </p>
               </form>
-
-            </form>
-        </>
+            </>
           )}
+        </div>
       </div>
-      </div >
     );
   }
 
-        </div >
-      </div >
-    );
-  }
-
-return (
-  <div className="max-w-2xl mx-auto px-4 py-16">
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-          <UserIcon size={32} />
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-16">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+            <UserIcon size={32} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
+            <p className="text-slate-500">{user.email}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
-          <p className="text-slate-500">{user.email}</p>
+
+        <div className="space-y-4">
+          <Button variant="outline" fullWidth onClick={() => navigate('/history')}>
+            View Scan History
+          </Button>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 py-3 rounded-xl transition-colors font-medium"
+          >
+            <LogOut size={18} />
+            Sign Out
+          </button>
         </div>
-      </div>
-
-      <div className="space-y-4">
-        <Button variant="outline" fullWidth onClick={() => navigate('/history')}>
-          View Scan History
-        </Button>
-
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 py-3 rounded-xl transition-colors font-medium"
-        >
-          <LogOut size={18} />
-          Sign Out
-        </button>
       </div>
     </div>
-  </div>
-);
+  );
 };
