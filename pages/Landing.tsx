@@ -24,15 +24,15 @@ export const Landing: React.FC = () => {
         <div className="relative z-10">
           <div className="inline-flex items-center rounded-full border border-orange-100 bg-orange-50 px-4 py-1.5 text-sm font-semibold text-orange-600 mb-8 animate-fade-in">
             <ShieldAlert size={16} className="mr-2" />
-            Stop getting ripped off
+            Stop overpaying for your car
           </div>
 
           <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl md:text-7xl mb-6 max-w-4xl mx-auto leading-[1.1]">
-            Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Deal Shield</span> against hidden fees.
+            Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Deal Shield</span> for fair pricing.
           </h1>
 
           <p className="mx-auto max-w-2xl text-xl text-slate-600 mb-10 leading-relaxed">
-            Upload your car deal sheet. We instantly flag fake add-ons, inflated fees, and give you the script to negotiate the price down.
+            Upload your car deal sheet. We instantly flag unnecessary add-ons, inflated fees, and give you the script to negotiate a fair price.
           </p>
 
           <Link to="/upload">
@@ -70,13 +70,13 @@ export const Landing: React.FC = () => {
       <section className="w-full bg-white py-20 border-t border-slate-100">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-extrabold text-center text-slate-900 mb-4">How It Works</h2>
-          <p className="text-center text-slate-500 mb-12 max-w-xl mx-auto">Three simple steps to uncover hidden fees and negotiate like a pro.</p>
+          <p className="text-center text-slate-500 mb-12 max-w-xl mx-auto">Three simple steps to uncover hidden costs and negotiate with confidence.</p>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: <Scan size={28} />, step: "1", title: "Upload", desc: "Take a picture of the buyer's order or finance sheet from the dealer." },
-              { icon: <FileSearch size={28} />, step: "2", title: "Analyze", desc: "AI scans for 30+ known dealer tricks, hidden markups, and fake fees." },
-              { icon: <DollarSign size={28} />, step: "3", title: "Negotiate", desc: "Get a specific \"Remove this fee\" script to save $1,000+ instantly." },
+              { icon: <Scan size={28} />, step: "1", title: "Upload", desc: "Take a picture of the buyer's order or finance sheet from the dealership." },
+              { icon: <FileSearch size={28} />, step: "2", title: "Analyze", desc: "AI scans for 30+ known dealer fees, markups, and add-ons." },
+              { icon: <DollarSign size={28} />, step: "3", title: "Negotiate", desc: "Get a specific \"Remove this fee\" script to save thousands instantly." },
             ].map((item, i) => (
               <div key={i} className="p-8 bg-gradient-to-b from-slate-50 to-white rounded-2xl border border-slate-100 hover:shadow-lg hover:border-indigo-100 transition-all duration-300 group">
                 <div className="h-14 w-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mb-5 group-hover:scale-110 transition-transform">
@@ -97,25 +97,25 @@ export const Landing: React.FC = () => {
 
         <div className="max-w-6xl mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold mb-4">The Hard Truth About Car Buying</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto text-lg">Dealerships are experts at extracting maximum profit. The odds are stacked against you.</p>
+            <h2 className="text-3xl font-extrabold mb-4">Market Insights & Analysis</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto text-lg">Car buying is complex. Ensure you pay a fair price based on current market data.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-colors">
               <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400 mb-4">82%</div>
               <h3 className="text-xl font-bold mb-2">Pay Over MSRP</h3>
-              <p className="text-slate-400">In peak markets, over 80% of buyers pay above the sticker price due to "Market Adjustments" and forced add-ons.</p>
+              <p className="text-slate-400">In peak markets, over 80% of buyers pay above the sticker price due to market adjustments and add-ons.</p>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-colors">
               <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-400 mb-4">$2,500+</div>
-              <h3 className="text-xl font-bold mb-2">Hidden Back-end Profit</h3>
-              <p className="text-slate-400">Dealers make thousands on the "back-end" through inflated finance rates, unnecessary warranties, and doc fees.</p>
+              <h3 className="text-xl font-bold mb-2">Hidden Fees & Markups</h3>
+              <p className="text-slate-400">Many deals include optional products and markups that can cost thousands over the life of the loan.</p>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-colors">
               <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400 mb-4">76%</div>
-              <h3 className="text-xl font-bold mb-2">Don't Trust Dealers</h3>
-              <p className="text-slate-400">Three out of four Americans don't trust car dealers to be honest about pricing. You need an unbiased shield.</p>
+              <h3 className="text-xl font-bold mb-2">Pricing Complexity</h3>
+              <p className="text-slate-400">Most buyers find car pricing confusing and lack confidence they got a fair deal. We provide clarity.</p>
             </div>
           </div>
 
@@ -129,7 +129,7 @@ export const Landing: React.FC = () => {
       <section className="w-full bg-slate-50 py-20 border-t border-slate-100">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-extrabold text-center text-slate-900 mb-4">Where We Find Your Money</h2>
-          <p className="text-center text-slate-500 mb-12 max-w-2xl mx-auto">Our AI scans for 30+ specific fees that dealers use to pad their profits.</p>
+          <p className="text-center text-slate-500 mb-12 max-w-2xl mx-auto">Our AI scans for 30+ specific items that may inflate your total price.</p>
 
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-4">
