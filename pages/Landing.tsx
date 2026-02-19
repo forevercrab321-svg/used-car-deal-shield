@@ -90,29 +90,86 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
+      {/* Market Reality Check - NEW SECTION */}
+      <section className="w-full bg-slate-900 py-20 text-white overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600 rounded-full opacity-20 blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-purple-600 rounded-full opacity-20 blur-3xl translate-y-1/2 -translate-x-1/3"></div>
+
+        <div className="max-w-6xl mx-auto px-4 relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold mb-4">The Hard Truth About Car Buying</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto text-lg">Dealerships are experts at extracting maximum profit. The odds are stacked against you.</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-colors">
+              <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400 mb-4">82%</div>
+              <h3 className="text-xl font-bold mb-2">Pay Over MSRP</h3>
+              <p className="text-slate-400">In peak markets, over 80% of buyers pay above the sticker price due to "Market Adjustments" and forced add-ons.</p>
+            </div>
+            <div className="bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-colors">
+              <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-400 mb-4">$2,500+</div>
+              <h3 className="text-xl font-bold mb-2">Hidden Back-end Profit</h3>
+              <p className="text-slate-400">Dealers make thousands on the "back-end" through inflated finance rates, unnecessary warranties, and doc fees.</p>
+            </div>
+            <div className="bg-slate-800/50 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-colors">
+              <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400 mb-4">76%</div>
+              <h3 className="text-xl font-bold mb-2">Don't Trust Dealers</h3>
+              <p className="text-slate-400">Three out of four Americans don't trust car dealers to be honest about pricing. You need an unbiased shield.</p>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-sm text-slate-500">Sources: Consumer Reports, Edmunds, Capital One Research (2024)</p>
+          </div>
+        </div>
+      </section>
+
       {/* What We Detect */}
       <section className="w-full bg-slate-50 py-20 border-t border-slate-100">
         <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-3xl font-extrabold text-center text-slate-900 mb-4">What We Detect</h2>
-          <p className="text-center text-slate-500 mb-12 max-w-2xl mx-auto">Our AI is trained to catch the tricks dealers use to inflate your price.</p>
+          <h2 className="text-3xl font-extrabold text-center text-slate-900 mb-4">Where We Find Your Money</h2>
+          <p className="text-center text-slate-500 mb-12 max-w-2xl mx-auto">Our AI scans for 30+ specific fees that dealers use to pad their profits.</p>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              "Market Adjustment Fees",
-              "Inflated Doc Fees",
-              "Nitrogen Tire Charges",
-              "GPS Tracking Devices",
-              "Paint Protection Markup",
-              "Fabric Coating Scams",
-              "Dealer Prep Fees",
-              "VIN Etching Overcharge",
-              "Extended Warranty Markup",
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white rounded-xl p-4 border border-slate-100">
-                <CheckCircle size={18} className="text-green-500 shrink-0" />
-                <span className="text-slate-700 font-medium">{item}</span>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-4">
+              {[
+                { label: "Market Adjustment / Markups", val: "$1,000 - $5,000+" },
+                { label: "Inflated Doc Fees", val: "$400 - $1,200" },
+                { label: "Nitrogen Tire Fill", val: "$199 - $499" },
+                { label: "GPS / LoJack Trackers", val: "$895 - $1,495" },
+                { label: "Paint & Fabric Protection", val: "$699 - $1,999" },
+                { label: "VIN Etching", val: "$299 - $499" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <ShieldAlert size={20} className="text-red-500" />
+                    <span className="font-semibold text-slate-700">{item.label}</span>
+                  </div>
+                  <span className="font-bold text-slate-900">{item.val}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-indigo-900 rounded-2xl p-8 text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="text-2xl font-bold mb-6">Total Potential Savings</h3>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-5xl font-extrabold text-green-400">$3,000+</span>
+                  <span className="text-indigo-200">on average</span>
+                </div>
+                <p className="text-indigo-200 mb-8 leading-relaxed">
+                  For less than the cost of a tank of gas, Deal Shield identifies every penny you can save. We give you the exact leverage to say "No" to these fees.
+                </p>
+                <Link to="/upload">
+                  <Button className="w-full bg-white text-indigo-900 hover:bg-indigo-50 font-bold border-none">
+                    Start Saving Now <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
               </div>
-            ))}
+              {/* Decor */}
+              <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-500 rounded-full opacity-30 blur-2xl"></div>
+            </div>
           </div>
         </div>
       </section>
