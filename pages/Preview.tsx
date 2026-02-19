@@ -100,6 +100,9 @@ export const Preview: React.FC = () => {
             </div>
           </div>
         </div>
-    </div>
+      </div>
+  ) : null
+}
+    </div >
   );
 };
