@@ -571,15 +571,29 @@ app.post('/deals/analyze', async (c) => {
     });
 
     const prompt = `
-    You are an expert car buyer advocate. Analyze this deal data: ${dealContext}.
-    Identify hidden fees/red flags.
+    You are an expert car buyer advocate and negotiator. Analyze this deal data: ${dealContext}.
+    
+    Start by cross-referencing the vehicle price with current market values (KBB, Edmunds, NADA trends for this vehicle).
+    Identify hidden fees, fake add-ons, and inflated markups.
+    
     Return ONLY valid JSON in this structure:
     {
-      "score": number (0-100, lower is better deal),
-      "red_flags": [ {"title": string, "severity":"high"|"medium"|"low", "explanation": string, "estimated_savings": number, "negotiation_line": string} ],
+      "score": number (0-100, lower is better deal. 100=Ripoff, 0=Great Deal),
+      "red_flags": [ 
+        {
+          "title": "string (Name of the fee/issue)",
+          "severity": "high"|"medium"|"low", 
+          "explanation": "string (Why this is bad. CITE YOUR SOURCES like 'According to Edmunds...' or 'Standard industry practice is...')", 
+          "estimated_savings": number, 
+          "negotiation_line": "string (What to say to remove it)" 
+        } 
+      ],
       "target_otd_range": { "min": number, "max": number },
-      "scripts": { "email": string, "in_person": string },
-      "summary": "Short 2 sentence summary calling out the biggest rip-off."
+      "scripts": { 
+        "email": "string (Draft a cold, professional email to the dealer citing the specific fees and market data to refuse)", 
+        "in_person": "string (Script for face-to-face negotiation, focusing on 'walking away' leverage)" 
+      },
+      "summary": "string (Short 2 sentence summary calling out the biggest rip-off and referencing the fair market value range.)"
     }
     No markdown, just raw JSON.
   `;
