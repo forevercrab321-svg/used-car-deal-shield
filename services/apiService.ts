@@ -62,7 +62,8 @@ export const apiService = {
             user_id: session.user.id,
             email: session.user.email || '',
             name: profile?.full_name || session.user.email?.split('@')[0] || 'User',
-            credits: profile?.credits || 0
+            credits: profile?.credits || 0,
+            role: session.user.user_metadata?.role
         };
     },
 
