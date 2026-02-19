@@ -10,6 +10,15 @@ export const Preview: React.FC = () => {
   const navigate = useNavigate();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null); // Quick fix for user type
+
+  useEffect(() => {
+    const init = async () => {
+      const u = await apiService.getCurrentUser();
+      setUser(u);
+    };
+    init();
+  }, []);
 
   useEffect(() => {
     const fetchDeal = async () => {
@@ -55,41 +64,42 @@ export const Preview: React.FC = () => {
         </div>
       </div>
 
-      {/* Locked Analysis Preview */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
-        <div className="absolute inset-0 z-10 bg-white/10 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center">
-          <Lock size={40} className="text-slate-800 mb-4 drop-shadow-md" />
-          <h3 className="text-xl font-bold text-slate-900 mb-2 drop-shadow-sm">Full Analysis Locked</h3>
-          <p className="text-slate-900 font-medium mb-6 drop-shadow-sm">Unlock to see the Red Flags and Negotiation Script.</p>
-          <Button
-            onClick={() => navigate(`/paywall/${dealId}`)}
-            className="px-8 py-4 text-base shadow-xl"
-            fullWidth
-          >
-            Unlock Report
-            <ChevronRight size={20} className="ml-1" />
-          </Button>
-        </div>
+      {/* Locked Analysis Preview - Skip if Admin or Paid */}
+      {(!deal.paid && user?.role !== 'admin') ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
+          <div className="absolute inset-0 z-10 bg-white/10 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center">
+            <Lock size={40} className="text-slate-800 mb-4 drop-shadow-md" />
+            <h3 className="text-xl font-bold text-slate-900 mb-2 drop-shadow-sm">Full Analysis Locked</h3>
+            <p className="text-slate-900 font-medium mb-6 drop-shadow-sm">Unlock to see the Red Flags and Negotiation Script.</p>
+            <Button
+              onClick={() => navigate(`/paywall/${dealId}`)}
+              className="px-8 py-4 text-base shadow-xl"
+              fullWidth
+            >
+              Unlock Report
+              <ChevronRight size={20} className="ml-1" />
+            </Button>
+          </div>
 
-        {/* Blurred Content Background */}
-        <div className="p-6 opacity-30 select-none filter blur-sm">
-          <div className="flex justify-between mb-6">
-            <div>
-              <p className="text-sm text-slate-500 font-bold uppercase">Deal Score</p>
-              <p className="text-3xl font-bold text-red-500">42/100</p>
+          {/* Blurred Content Background */}
+          <div className="p-6 opacity-30 select-none filter blur-sm">
+            <div className="flex justify-between mb-6">
+              <div>
+                <p className="text-sm text-slate-500 font-bold uppercase">Deal Score</p>
+                <p className="text-3xl font-bold text-red-500">42/100</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-slate-500 font-bold uppercase">Red Flags</p>
+                <p className="text-3xl font-bold text-slate-900">3 Found</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-slate-500 font-bold uppercase">Red Flags</p>
-              <p className="text-3xl font-bold text-slate-900">3 Found</p>
+            <div className="space-y-4">
+              <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+              <div className="h-4 bg-slate-200 rounded w-full"></div>
+              <div className="h-4 bg-slate-200 rounded w-5/6"></div>
             </div>
-          </div>
-          <div className="space-y-4">
-            <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-            <div className="h-4 bg-slate-200 rounded w-full"></div>
-            <div className="h-4 bg-slate-200 rounded w-5/6"></div>
           </div>
         </div>
-      </div>
     </div>
   );
 };

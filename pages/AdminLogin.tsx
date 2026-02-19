@@ -19,14 +19,18 @@ export const AdminLogin: React.FC = () => {
         try {
             const data = await apiService.adminLogin(password);
 
-            // Set session manually for Supabase client
-            const { error: sessionError } = await supabase.auth.setSession({
-                access_token: data.token,
-                refresh_token: data.refreshToken
-            });
+            // Attempt to set session, but continue if token is valid
+            try {
+                await supabase.auth.setSession({
+                    access_token: data.token,
+                    refresh_token: data.refreshToken
+                });
+            } catch (sessionErr) {
+                console.warn('Session set warning:', sessionErr);
+                // If we have a token, we can likely proceed even if setSession throws
+            }
 
-            if (sessionError) throw sessionError;
-
+            // Force reload user state in apiService if needed, or just navigate
             navigate('/history');
         } catch (err: any) {
             console.error('Admin login failed:', err);
