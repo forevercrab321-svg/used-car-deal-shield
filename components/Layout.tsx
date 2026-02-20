@@ -101,7 +101,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Link to="/history" className="hover:text-indigo-600 transition-colors">History</Link>
               <Link to="/account" className="hover:text-indigo-600 transition-colors">Account</Link>
             </div>
-            <p className="text-xs text-slate-400">© 2026 Deal Shield. All rights reserved.</p>
+            <Link to="/admin" className="text-xs text-slate-400 hover:text-slate-400 cursor-default">© 2026 Deal Shield. All rights reserved.</Link>
           </div>
         </div>
       </footer>
