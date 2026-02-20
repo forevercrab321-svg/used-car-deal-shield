@@ -12,6 +12,7 @@ const mapDbDealToType = (dbDeal: any): Deal => ({
     extracted_fields: dbDeal.extracted_fields || {},
     status: dbDeal.status as DealStatus,
     created_at: dbDeal.created_at,
+    paid: dbDeal.paid || false,
     preview: dbDeal.preview_data ? {
         risk_count: dbDeal.preview_data.risk_count,
         potential_savings_range: dbDeal.preview_data.potential_savings_range,

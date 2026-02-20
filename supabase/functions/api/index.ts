@@ -256,53 +256,39 @@ app.post('/auth/admin/login', async (c) => {
     const ADMIN_EMAIL = 'admin@dealshield.pro';
     const ADMIN_PASSWORD = 'admin-dealshield-2026-secret';
 
-    // Create or sign in admin user
-    let signInResult = await supabase.auth.signInWithPassword({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD
-    });
+    // Step 1: Ensure admin user exists with correct metadata
+    const { data: { users } } = await supabase.auth.admin.listUsers();
+    const existingAdmin = users?.find((u: any) => u.email === ADMIN_EMAIL);
 
-    if (signInResult.error) {
-        // Create admin user
+    if (existingAdmin) {
+        // Update metadata and password before signing in
+        await supabase.auth.admin.updateUserById(existingAdmin.id, {
+            password: ADMIN_PASSWORD,
+            email_confirm: true,
+            user_metadata: { role: 'admin', full_name: 'Admin Pro' }
+        });
+    } else {
+        // Create admin user with metadata already set
         const createResult = await supabase.auth.admin.createUser({
             email: ADMIN_EMAIL,
             password: ADMIN_PASSWORD,
             email_confirm: true,
             user_metadata: { role: 'admin', full_name: 'Admin Pro' }
         });
-
-        if (createResult.error && createResult.error.message.includes('already')) {
-            // User exists, reset password and set admin role
-            const { data: { users } } = await supabase.auth.admin.listUsers();
-            const adminUser = users?.find((u: any) => u.email === ADMIN_EMAIL);
-            if (adminUser) {
-                await supabase.auth.admin.updateUserById(adminUser.id, {
-                    password: ADMIN_PASSWORD,
-                    email_confirm: true,
-                    user_metadata: { role: 'admin', full_name: 'Admin Pro' }
-                });
-            }
-        }
-
-        // Retry sign in
-        signInResult = await supabase.auth.signInWithPassword({
-            email: ADMIN_EMAIL,
-            password: ADMIN_PASSWORD
-        });
-
-        if (signInResult.error) {
-            return c.json({ error: 'Admin login failed: ' + signInResult.error.message }, 500);
+        if (createResult.error) {
+            return c.json({ error: 'Failed to create admin: ' + createResult.error.message }, 500);
         }
     }
 
-    if (!signInResult.data.session) {
-        return c.json({ error: 'No session created' }, 500);
-    }
-
-    // Ensure admin role is set in metadata
-    await supabase.auth.admin.updateUserById(signInResult.data.user!.id, {
-        user_metadata: { role: 'admin', full_name: 'Admin Pro' }
+    // Step 2: Sign in AFTER metadata is set so JWT contains the role
+    const signInResult = await supabase.auth.signInWithPassword({
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD
     });
+
+    if (signInResult.error || !signInResult.data.session) {
+        return c.json({ error: 'Admin login failed: ' + (signInResult.error?.message || 'No session') }, 500);
+    }
 
     return c.json({
         token: signInResult.data.session.access_token,

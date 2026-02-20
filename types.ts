@@ -33,6 +33,7 @@ export interface Deal {
   extracted_fields: ExtractedFields;
   status: DealStatus;
   created_at: string;
+  paid?: boolean;
   preview?: {
     risk_count: number;
     potential_savings_range: string; // e.g. "$1,500 - $3,000"
