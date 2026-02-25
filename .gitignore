@@ -31,3 +31,4 @@ dist-ssr
 .vscode
 supabase/functions/**/.env
 .env
+.vercel

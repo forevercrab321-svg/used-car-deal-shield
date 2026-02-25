@@ -140,8 +140,8 @@ export const Preview: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* Locked Analysis Preview - Skip if Admin or Paid */
-        (!deal.paid && user?.role !== 'admin') ? (
+        /* Locked Analysis Preview - Skip if Admin, Developer, or Paid */
+        (!deal.paid && user?.role !== 'admin' && user?.email !== 'forevercrab321@gmail.com') ? (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative min-h-[600px]">
             <div className="relative z-10 bg-white/10 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center min-h-[600px]">
               <Lock size={40} className="text-slate-800 mb-4 drop-shadow-md" />

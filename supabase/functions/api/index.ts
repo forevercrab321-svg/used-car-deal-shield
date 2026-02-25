@@ -550,9 +550,9 @@ app.post('/deals/analyze', async (c) => {
 
     const { dealId } = await c.req.json();
 
-    // 1. Verify Payment (skip for admin users)
+    // 1. Verify Payment (skip for admin users or developer email)
     const { data: deal } = await supabase.from('deals').select('*').eq('id', dealId).single();
-    const isAdmin = user.user_metadata?.role === 'admin';
+    const isAdmin = user.user_metadata?.role === 'admin' || user.email === 'forevercrab321@gmail.com';
     if (!isAdmin && !deal?.paid) return c.json({ requiresPayment: true });
 
     // 2. Check Cache
