@@ -142,7 +142,7 @@ export const apiService = {
             .from('deals')
             .select('*')
             .eq('id', dealId)
-            .single();
+            .maybeSingle(); // Prevents PGRST116 error if 0 rows returned
         if (error || !data) return null;
         return mapDbDealToType(data);
     },

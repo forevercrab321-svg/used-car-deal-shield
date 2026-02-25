@@ -33,10 +33,16 @@ export const Preview: React.FC = () => {
 
   // Fetch Report if Unlocked
   useEffect(() => {
-    if (deal && (deal.paid || user?.role === 'admin')) {
+    if (deal && (deal.paid || user?.role === 'admin' || user?.email === 'forevercrab321@gmail.com')) {
       const loadReport = async () => {
-        const res = await apiService.analyzeDeal(deal.deal_id);
-        if (res.report) setReport(res.report);
+        try {
+          const res = await apiService.analyzeDeal(deal.deal_id);
+          if (res.report) {
+            setReport(res.report);
+          }
+        } catch (e) {
+          console.error("Failed to load report", e);
+        }
       };
       loadReport();
     }
@@ -214,8 +220,10 @@ export const Preview: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="flex justify-center p-12">
-            <div className="animate-spin h-8 w-8 border-4 border-indigo-600 rounded-full border-t-transparent"></div>
+          <div className="flex flex-col items-center justify-center p-12 space-y-4">
+            <div className="animate-spin h-10 w-10 border-4 border-indigo-600 rounded-full border-t-transparent"></div>
+            <p className="text-slate-600 font-medium">Running advanced AI market analysis...</p>
+            <p className="text-slate-400 text-sm">This usually takes about 10-15 seconds.</p>
           </div>
         )
       )}

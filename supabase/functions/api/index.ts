@@ -48,7 +48,7 @@ app.use('*', cors({
         return FRONTEND_ORIGIN;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'Stripe-Signature'],
+    allowHeaders: ['Content-Type', 'Authorization', 'Stripe-Signature', 'apikey', 'x-client-info'],
     exposeHeaders: ['Content-Length'],
     maxAge: 600,
     credentials: true,
