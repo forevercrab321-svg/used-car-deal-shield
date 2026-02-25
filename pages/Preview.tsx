@@ -11,6 +11,7 @@ export const Preview: React.FC = () => {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // Quick fix for user type
 
   useEffect(() => {
@@ -40,8 +41,9 @@ export const Preview: React.FC = () => {
           if (res.report) {
             setReport(res.report);
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error("Failed to load report", e);
+          setError(e.message || "An unexpected API error occurred.");
         }
       };
       loadReport();
@@ -218,6 +220,15 @@ export const Preview: React.FC = () => {
                 <div className="h-4 bg-slate-200 rounded w-full"></div>
               </div>
             </div>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center p-12 space-y-4">
+            <div className="bg-red-50 text-red-600 p-4 rounded-full">
+              <AlertTriangle size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Analysis Failed</h3>
+            <p className="text-red-500 font-medium text-center">{error}</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">Try Again</Button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-12 space-y-4">

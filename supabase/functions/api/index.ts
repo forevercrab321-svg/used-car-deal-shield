@@ -69,11 +69,19 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
 // Helper to get user from Auth header
 async function getUser(c: any) {
     const authHeader = c.req.header('Authorization');
-    if (!authHeader) return null;
+    if (!authHeader) return { user: null, error: 'Missing Authorization header' };
+
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return null;
-    return user;
+
+    if (error) {
+        return { user: null, error: `Supabase auth error: ${error.message} (token: ${token.substring(0, 10)}...)` };
+    }
+    if (!user) {
+        return { user: null, error: 'User is null after auth.getUser' };
+    }
+
+    return { user, error: null };
 }
 
 // ============================================================
@@ -303,16 +311,16 @@ app.post('/auth/admin/login', async (c) => {
 
 // 3. User Info (/me)
 app.get('/me', async (c) => {
-    const user = await getUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const { user, error: authError } = await getUser(c);
+    if (authError || !user) return c.json({ error: authError || 'Unauthorized' }, 401);
     return c.json({ user, entitlements: { credits: 0 } });
 });
 
 // 4. File Presign
 // 4. File Presign
 app.post('/files/presign', async (c) => {
-    const user = await getUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const { user, error: authError } = await getUser(c);
+    if (authError || !user) return c.json({ error: authError || 'Unauthorized' }, 401);
 
     const { fileExt } = await c.req.json();
     const ext = fileExt ? fileExt.replace('.', '') : 'pdf';
@@ -343,8 +351,8 @@ app.get('/setup-bucket', async (c) => {
 
 // 5. File Confirm
 app.post('/files/confirm', async (c) => {
-    const user = await getUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const { user, error: authError } = await getUser(c);
+    if (authError || !user) return c.json({ error: authError || 'Unauthorized' }, 401);
     const { fileUrl } = await c.req.json();
     return c.json({ fileId: fileUrl });
 });
@@ -507,8 +515,8 @@ app.post('/deals/parse', async (c) => {
 
 // 7. Stripe Checkout
 app.post('/billing/checkout', async (c) => {
-    const user = await getUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const { user, error: authError } = await getUser(c);
+    if (authError || !user) return c.json({ error: authError || 'Unauthorized' }, 401);
 
     const { dealId } = await c.req.json();
 
@@ -545,8 +553,8 @@ app.get('/billing/status', async (c) => {
 
 // 9. Analyze Deal (GEMINI Integrated)
 app.post('/deals/analyze', async (c) => {
-    const user = await getUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const { user, error: authError } = await getUser(c);
+    if (authError || !user) return c.json({ error: authError || 'Unauthorized' }, 401);
 
     const { dealId } = await c.req.json();
 
@@ -662,8 +670,8 @@ app.get('/reviews', async (c) => {
 });
 
 app.post('/reviews', async (c) => {
-    const user = await getUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const { user, error: authError } = await getUser(c);
+    if (authError || !user) return c.json({ error: authError || 'Unauthorized' }, 401);
 
     const { dealId, rating, comment } = await c.req.json();
 
