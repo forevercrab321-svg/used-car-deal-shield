@@ -38,6 +38,9 @@ export interface Deal {
     risk_count: number;
     potential_savings_range: string; // e.g. "$1,500 - $3,000"
     risk_message: string;
+    market_value_range?: string;
+    estimated_overcharge?: number;
+    preview_risk_message?: string;
   };
 }
 

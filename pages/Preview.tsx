@@ -54,11 +54,18 @@ export const Preview: React.FC = () => {
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Attention Required</h1>
         <p className="text-slate-700 font-medium">
-          {deal.preview?.risk_message || "We found multiple issues with this deal."}
+          {deal.preview?.preview_risk_message || deal.preview?.risk_message || "We found multiple issues with this deal."}
         </p>
-        <p className="text-sm text-slate-500 mt-2">
-          You are potentially overpaying by <span className="font-bold text-slate-900">{deal.preview?.potential_savings_range || "$1,000+"}</span>.
-        </p>
+
+        {deal.preview?.estimated_overcharge && deal.preview.estimated_overcharge > 0 ? (
+          <p className="text-sm text-slate-500 mt-2">
+            You are currently overpaying by EXACTLY <span className="font-bold text-red-600">${deal.preview.estimated_overcharge.toLocaleString()}</span>.
+          </p>
+        ) : (
+          <p className="text-sm text-slate-500 mt-2">
+            You are potentially overpaying by <span className="font-bold text-slate-900">{deal.preview?.potential_savings_range || "$1,000+"}</span>.
+          </p>
+        )}
       </div>
 
       {/* Info Card */}
@@ -162,7 +169,10 @@ export const Preview: React.FC = () => {
                 className="px-8 py-4 text-base shadow-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 border-none"
                 fullWidth
               >
-                Unlock Report - $19.99
+                {deal.preview?.estimated_overcharge && deal.preview.estimated_overcharge > 0
+                  ? `Fix It & Save $${deal.preview.estimated_overcharge.toLocaleString()} - $19.99`
+                  : `Unlock Report - $19.99`
+                }
                 <ChevronRight size={20} className="ml-1" />
               </Button>
 

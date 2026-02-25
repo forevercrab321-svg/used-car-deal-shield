@@ -396,9 +396,12 @@ app.post('/deals/parse', async (c) => {
         const mimeType = fileBlob.type || 'application/pdf';
 
         const prompt = `
-        You are an expert OCR for car dealership documents. 
+        You are an expert OCR and car valuation assistant for an anti-scam tool called Deal Shield. 
         Analyze this Buyer's Order / Deal Sheet.
-        Extract the following fields accurately.
+        Extract the vehicle info, and then IMPORTANTLY use Google Search to find the CURRENT market value for this specific vehicle (Year, Make, Model, Trim) from authoritative sources like KBB, Edmunds, or NADA.
+        Do NOT rely on your internal training data for pricing. Cite the specific date and source of the pricing you found.
+        Calculate the "estimated_overcharge" by taking the total Out-The-Door price (or Selling Price + Fees if OTD is missing) and subtracting the low end of the Fair Market Value range you found. If they are getting a great deal, set overcharge to 0.
+
         Return ONLY valid JSON.
         Structure:
         {
@@ -407,7 +410,10 @@ app.post('/deals/parse', async (c) => {
             "fees": { "doc_fee": number, "prep_fee": number, "gps": number, "other_add_ons": number },
             "vin": "string",
             "mileage": number,
-            "otd_price": number (Out the Door Price / Total Cash Price)
+            "otd_price": number (Out the Door Price / Total Cash Price),
+            "market_value_range": "e.g., $18,500 - $19,200",
+            "estimated_overcharge": number (Dealer OTD - Market Value - taxes),
+            "preview_risk_message": "string (e.g. We found market data! Your 2021 Camry is worth $18,500 but the dealer is charging $21,300. You are being overcharged by $2,800.)"
         }
         If a field is missing, use null or 0.
         `;
@@ -426,7 +432,8 @@ app.post('/deals/parse', async (c) => {
                             }
                         }
                     ]
-                }]
+                }],
+                tools: [{ google_search: {} }]
             })
         });
 
@@ -449,10 +456,23 @@ app.post('/deals/parse', async (c) => {
         }
 
         // 3. Construct preview
+        const overcharge = extracted.estimated_overcharge || 0;
+
         const preview = {
             vehicle_name: extracted.vehicle || "Unknown Vehicle",
             price: extracted.otd_price ? `$${extracted.otd_price.toLocaleString()}` : (extracted.price ? `$${extracted.price.toLocaleString()}` : "N/A"),
-            mileage: extracted.mileage ? extracted.mileage.toLocaleString() : "N/A"
+            mileage: extracted.mileage ? extracted.mileage.toLocaleString() : "N/A",
+            // New Market Data Fields
+            market_value_range: extracted.market_value_range || "N/A",
+            estimated_overcharge: overcharge,
+            preview_risk_message: extracted.preview_risk_message ||
+                (overcharge > 0
+                    ? `We found market data! You are being overcharged by $${overcharge.toLocaleString()}.`
+                    : "We need more details to confirm if this is a good deal."),
+            // Legacy fallbacks
+            risk_count: 3,
+            potential_savings_range: overcharge > 0 ? `$${Math.floor(overcharge * 0.8).toLocaleString()} - $${overcharge.toLocaleString()}` : "N/A",
+            risk_message: extracted.preview_risk_message || "We found multiple issues with this deal."
         };
 
         // 4. Save to DB
